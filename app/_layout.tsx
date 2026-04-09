@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useColorScheme } from 'react-native'
+import { LocationProvider } from '@/contexts/LocationContext'
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 import 'react-native-reanimated'
 
 export { ErrorBoundary } from 'expo-router'
@@ -13,8 +14,8 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync()
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme()
+function InnerLayout() {
+  const { isDark } = useTheme()
 
   useEffect(() => {
     SplashScreen.hideAsync()
@@ -22,11 +23,21 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>
+  )
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <LocationProvider>
+        <InnerLayout />
+      </LocationProvider>
+    </ThemeProvider>
   )
 }

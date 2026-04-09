@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, useColorScheme } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface InfoCardProps {
   type: 'uv' | 'pm25' | 'humidity'
@@ -20,8 +21,7 @@ const LEVEL_COLORS: Record<string, string> = {
 }
 
 export function InfoCard({ type, value, label, level }: InfoCardProps) {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const { isDark } = useTheme()
 
   return (
     <View style={[styles.card, isDark && styles.cardDark]}>

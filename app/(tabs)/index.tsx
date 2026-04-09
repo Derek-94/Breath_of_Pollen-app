@@ -7,10 +7,10 @@ import {
   RefreshControl,
   Pressable,
   ActivityIndicator,
-  useColorScheme,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocation } from '@/hooks/useLocation'
+import { useLocationContext } from '@/contexts/LocationContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { useWeatherData } from '@/hooks/useWeatherData'
 import { PollenCard } from '@/components/PollenCard'
 import { OutfitCard } from '@/components/OutfitCard'
@@ -21,8 +21,7 @@ import { LocationPicker } from '@/components/LocationPicker'
 import { getUVLabel, isLaundryOk } from '@/lib/weather-utils'
 
 function Logo() {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const { isDark } = useTheme()
   const dots = ['#4ade80', '#facc15', '#fb923c', '#f87171', '#c084fc']
 
   return (
@@ -38,9 +37,8 @@ function Logo() {
 }
 
 export default function TodayScreen() {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
-  const { location, loading: locationLoading, error: locationError, setManualLocation } = useLocation()
+  const { isDark } = useTheme()
+  const { location, loading: locationLoading, error: locationError, setManualLocation } = useLocationContext()
   const { data, loading: dataLoading, error: dataError, pollenUnavailable, refetch } = useWeatherData(
     location?.lat ?? null,
     location?.lon ?? null,

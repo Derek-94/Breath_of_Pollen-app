@@ -7,10 +7,10 @@ import {
   RefreshControl,
   Pressable,
   ActivityIndicator,
-  useColorScheme,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocation } from '@/hooks/useLocation'
+import { useLocationContext } from '@/contexts/LocationContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import { useWeatherData } from '@/hooks/useWeatherData'
 import { getPollenColor, POLLEN_LABELS, type PollenLevel } from '@/lib/weather-utils'
 
@@ -50,9 +50,8 @@ function TempBar({ low, high, dayLow, dayHigh, isDark }: {
 }
 
 export default function WeeklyScreen() {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
-  const { location, loading: locationLoading } = useLocation()
+  const { isDark } = useTheme()
+  const { location, loading: locationLoading } = useLocationContext()
   const { data, loading: dataLoading, error, refetch } = useWeatherData(
     location?.lat ?? null,
     location?.lon ?? null,

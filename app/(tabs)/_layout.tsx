@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router'
-import { useColorScheme, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { useTheme } from '@/contexts/ThemeContext'
 
 const TINT_LIGHT = '#f87171'
 const TINT_DARK = '#fb923c'
@@ -10,17 +11,17 @@ function TabIcon({ name, color }: { name: React.ComponentProps<typeof FontAwesom
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme()
-  const tint = colorScheme === 'dark' ? TINT_DARK : TINT_LIGHT
+  const { isDark } = useTheme()
+  const tint = isDark ? TINT_DARK : TINT_LIGHT
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: tint,
-        tabBarInactiveTintColor: colorScheme === 'dark' ? '#888' : '#999',
+        tabBarInactiveTintColor: isDark ? '#888' : '#999',
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff',
-          borderTopColor: colorScheme === 'dark' ? '#333' : '#eee',
+          backgroundColor: isDark ? '#1a1a1a' : '#fff',
+          borderTopColor: isDark ? '#333' : '#eee',
           paddingBottom: Platform.OS === 'ios' ? 16 : 8,
           height: Platform.OS === 'ios' ? 68 : 56,
         },

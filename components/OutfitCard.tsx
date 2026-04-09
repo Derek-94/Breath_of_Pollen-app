@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { type OutfitItem } from '@/lib/weather-utils'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface OutfitCardProps {
   items: OutfitItem[]
@@ -8,8 +9,7 @@ interface OutfitCardProps {
 }
 
 export function OutfitCard({ items, summary, onPress }: OutfitCardProps) {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const { isDark } = useTheme()
   const recommended = items.filter((i) => i.recommended)
 
   return (

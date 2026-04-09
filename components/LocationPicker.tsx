@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, useColorScheme } from 'react-native'
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native'
 import { PREFECTURE_COORDS, REGIONS } from '@/lib/prefecture-coords'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface LocationPickerProps {
   onSelect: (name: string, lat: number, lon: number) => void
@@ -7,8 +8,7 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerProps) {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const { isDark } = useTheme()
 
   return (
     <ScrollView

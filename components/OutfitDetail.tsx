@@ -4,10 +4,10 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  useColorScheme,
   Modal,
 } from 'react-native'
 import { type OutfitItem, type PollenLevel, POLLEN_LABELS, getPollenColor } from '@/lib/weather-utils'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface OutfitDetailProps {
   items: OutfitItem[]
@@ -18,11 +18,10 @@ interface OutfitDetailProps {
 }
 
 export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClose }: OutfitDetailProps) {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const { isDark } = useTheme()
 
   return (
-    <Modal animationType="slide" transparent statusBarTranslucent>
+    <Modal animationType="fade" transparent statusBarTranslucent>
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, isDark && styles.sheetDark]}>

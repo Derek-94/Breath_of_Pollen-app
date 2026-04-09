@@ -1,12 +1,12 @@
-import { View, Text, StyleSheet, ScrollView, useColorScheme } from 'react-native'
+import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface HourlyChartProps {
   data: { hour: string; temp: number; icon: string }[]
 }
 
 export function HourlyChart({ data }: HourlyChartProps) {
-  const colorScheme = useColorScheme()
-  const isDark = colorScheme === 'dark'
+  const { isDark } = useTheme()
 
   if (data.length === 0) return null
 
