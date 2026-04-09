@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePostHog } from 'posthog-react-native'
 import { fetchWeather, fetchPollen, fetchLocation } from '@/lib/api'
 import {
   getWeatherInfo,
   mapPollenIndex,
   getOutfitRecommendation,
-  getJapaneseDayOfWeek,
+  getDayIndex,
   formatDate,
+  POLLEN_LABEL_KEYS,
   type WeatherType,
   type PollenLevel,
   type OutfitItem,
-  POLLEN_LABELS,
+  type OutfitSummary,
 } from '@/lib/weather-utils'
 
 type PlantInfo = { code: string; indexInfo?: { value?: number } }
@@ -31,18 +33,22 @@ export interface AppData {
   high: number
   low: number
   weatherType: WeatherType
-  description: string
+  /** i18n key, e.g. 'weather.sunny' */
+  descriptionKey: string
   weatherCode: number
   humidity: number
   uvIndex: number
-  pollenCedar: { type: string; level: PollenLevel; label: string }
-  pollenCypress: { type: string; level: PollenLevel; label: string }
+  /** pollenCedar/Cypress: typeKey = 'plant.cedar'|'plant.cypress', labelKey = POLLEN_LABEL_KEYS[level] */
+  pollenCedar: { typeKey: string; level: PollenLevel; labelKey: string }
+  pollenCypress: { typeKey: string; level: PollenLevel; labelKey: string }
   pollenOverall: PollenLevel
   outfitItems: OutfitItem[]
-  outfitSummary: string
-  hourlyData: { hour: string; temp: number; icon: string }[]
+  outfitSummary: OutfitSummary
+  /** hour is a number (0–23); translate with t('hourly.hourFormat', { h }) */
+  hourlyData: { hour: number; temp: number; icon: string }[]
   weeklyForecast: {
-    day: string
+    /** 0=Sun … 6=Sat */
+    dayIndex: number
     date: string
     icon: string
     high: number
@@ -52,6 +58,7 @@ export interface AppData {
 }
 
 export function useWeatherData(lat: number | null, lon: number | null, locationName?: string) {
+  const posthog = usePostHog()
   const [data, setData] = useState<AppData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -105,7 +112,7 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         const timeStr: string = hourlyTimes[idx] ?? ''
         const h = parseInt(timeStr.slice(11, 13))
         return {
-          hour: `${h}時`,
+          hour: h,
           temp: Math.round(weather.hourly.temperature_2m[idx] ?? currentTemp),
           icon: getWeatherInfo(weather.hourly.weathercode[idx] ?? 0).emoji,
         }
@@ -115,7 +122,7 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
       const weeklyForecast = (weather.daily.time as string[]).map((dateStr: string, i: number) => {
         const weeklyPlants: PlantInfo[] = pollen.dailyInfo?.[i]?.plantInfo ?? []
         return {
-          day: getJapaneseDayOfWeek(dateStr),
+          dayIndex: getDayIndex(dateStr),
           date: formatDate(dateStr),
           icon: getWeatherInfo(weather.daily.weathercode[i]).emoji,
           high: Math.round(weather.daily.temperature_2m_max[i]),
@@ -130,12 +137,12 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         high: todayHigh,
         low: todayLow,
         weatherType: weatherInfo.type,
-        description: weatherInfo.description,
+        descriptionKey: weatherInfo.descriptionKey,
         weatherCode: currentCode,
         humidity: currentHumidity,
         uvIndex: currentUV,
-        pollenCedar: { type: 'スギ', level: cedarLevel, label: POLLEN_LABELS[cedarLevel] },
-        pollenCypress: { type: 'ヒノキ', level: cypressLevel, label: POLLEN_LABELS[cypressLevel] },
+        pollenCedar: { typeKey: 'plant.cedar', level: cedarLevel, labelKey: POLLEN_LABEL_KEYS[cedarLevel] },
+        pollenCypress: { typeKey: 'plant.cypress', level: cypressLevel, labelKey: POLLEN_LABEL_KEYS[cypressLevel] },
         pollenOverall: overallLevel,
         outfitItems,
         outfitSummary,
@@ -143,11 +150,13 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         weeklyForecast,
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'データの取得に失敗しました')
+      const msg = e instanceof Error ? e.message : 'common.error'
+      setError(msg)
+      posthog.capture('data_fetch_error', { error: msg, lat, lon })
     } finally {
       setLoading(false)
     }
-  }, [lat, lon, locationName])
+  }, [lat, lon, locationName, posthog])
 
   useEffect(() => {
     fetchData()

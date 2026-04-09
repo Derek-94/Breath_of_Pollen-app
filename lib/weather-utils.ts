@@ -3,33 +3,42 @@ export type PollenLevel = 1 | 2 | 3 | 4 | 5
 
 export interface OutfitItem {
   icon: string
+  /** i18n key, e.g. 'outfit.tshirt' */
   name: string
   recommended: boolean
+  /** i18n key, e.g. 'outfit.sunProtection' — undefined if no reason */
   reason?: string
 }
 
-export const POLLEN_LABELS: Record<PollenLevel, string> = {
-  1: "少ない",
-  2: "やや多い",
-  3: "多い",
-  4: "非常に多い",
-  5: "極めて多い",
+export interface OutfitSummary {
+  baseKey: string
+  params: { temp: number }
+  maskSuffixKey?: string
 }
 
-// WMO weather code → WeatherType + emoji + description
+/** i18n keys for pollen levels */
+export const POLLEN_LABEL_KEYS: Record<PollenLevel, string> = {
+  1: 'pollen.veryLow',
+  2: 'pollen.slightlyHigh',
+  3: 'pollen.high',
+  4: 'pollen.veryHigh',
+  5: 'pollen.extreme',
+}
+
+// WMO weather code → WeatherType + emoji + i18n description key
 export function getWeatherInfo(code: number): {
   type: WeatherType
   emoji: string
-  description: string
+  descriptionKey: string
 } {
-  if (code === 0) return { type: 'sunny', emoji: '☀️', description: '快晴' }
-  if (code <= 2) return { type: 'partly-cloudy', emoji: '🌤️', description: '晴れ時々曇り' }
-  if (code === 3) return { type: 'cloudy', emoji: '☁️', description: '曇り' }
-  if (code <= 48) return { type: 'foggy', emoji: '🌫️', description: '霧' }
-  if (code <= 67) return { type: 'rainy', emoji: '🌧️', description: '雨' }
-  if (code <= 77) return { type: 'snowy', emoji: '❄️', description: '雪' }
-  if (code <= 82) return { type: 'rainy', emoji: '🌦️', description: 'にわか雨' }
-  return { type: 'rainy', emoji: '⛈️', description: '雷雨' }
+  if (code === 0) return { type: 'sunny', emoji: '☀️', descriptionKey: 'weather.sunny' }
+  if (code <= 2) return { type: 'partly-cloudy', emoji: '🌤️', descriptionKey: 'weather.partlyCloudy' }
+  if (code === 3) return { type: 'cloudy', emoji: '☁️', descriptionKey: 'weather.cloudy' }
+  if (code <= 48) return { type: 'foggy', emoji: '🌫️', descriptionKey: 'weather.foggy' }
+  if (code <= 67) return { type: 'rainy', emoji: '🌧️', descriptionKey: 'weather.rainy' }
+  if (code <= 77) return { type: 'snowy', emoji: '❄️', descriptionKey: 'weather.snowy' }
+  if (code <= 82) return { type: 'rainy', emoji: '🌦️', descriptionKey: 'weather.showers' }
+  return { type: 'rainy', emoji: '⛈️', descriptionKey: 'weather.thunderstorm' }
 }
 
 // Google Pollen API index (0–5) → our 1–5 scale
@@ -41,78 +50,83 @@ export function mapPollenIndex(value: number | undefined | null): PollenLevel {
   return 5
 }
 
-// Outfit recommendation based on temperature + pollen
+// Outfit recommendation based on temperature + pollen — returns i18n keys
 export function getOutfitRecommendation(
   temp: number,
   pollenLevel: PollenLevel
-): { items: OutfitItem[]; summary: string } {
+): { items: OutfitItem[]; summary: OutfitSummary } {
   const needsMask = pollenLevel >= 3
   const needsGlasses = pollenLevel >= 4
 
   let baseItems: OutfitItem[]
-  let summary: string
+  let summaryBaseKey: string
 
   if (temp >= 28) {
     baseItems = [
-      { icon: '👕', name: 'Tシャツ', recommended: true },
-      { icon: '🩳', name: 'ショートパンツ', recommended: true },
-      { icon: '🧴', name: '日焼け止め', recommended: true, reason: '紫外線対策' },
+      { icon: '👕', name: 'outfit.tshirt', recommended: true },
+      { icon: '🩳', name: 'outfit.shorts', recommended: true },
+      { icon: '🧴', name: 'outfit.sunscreen', recommended: true, reason: 'outfit.sunProtection' },
     ]
-    summary = `気温${temp}°Cと暑め → 薄着で`
+    summaryBaseKey = 'outfitSummary.hot'
   } else if (temp >= 23) {
     baseItems = [
-      { icon: '👕', name: 'Tシャツ', recommended: true },
-      { icon: '👖', name: 'パンツ', recommended: true },
-      { icon: '🧣', name: '薄手の羽織', recommended: false },
+      { icon: '👕', name: 'outfit.tshirt', recommended: true },
+      { icon: '👖', name: 'outfit.pants', recommended: true },
+      { icon: '🧣', name: 'outfit.lightLayer', recommended: false },
     ]
-    summary = `気温${temp}°Cと快適 → 薄手の服装で`
+    summaryBaseKey = 'outfitSummary.warm'
   } else if (temp >= 18) {
     baseItems = [
-      { icon: '👔', name: '長袖シャツ', recommended: true },
-      { icon: '👖', name: 'パンツ', recommended: true },
-      { icon: '🧥', name: '薄手ジャケット', recommended: false },
+      { icon: '👔', name: 'outfit.longSleeveShirt', recommended: true },
+      { icon: '👖', name: 'outfit.pants', recommended: true },
+      { icon: '🧥', name: 'outfit.lightJacket', recommended: false },
     ]
-    summary = `気温${temp}°Cとやや涼しめ → 長袖がおすすめ`
+    summaryBaseKey = 'outfitSummary.mild'
   } else if (temp >= 13) {
     baseItems = [
-      { icon: '🧥', name: 'ライトジャケット', recommended: true, reason: `気温${temp}°Cに最適` },
-      { icon: '👕', name: '長袖シャツ', recommended: true },
-      { icon: '👖', name: 'パンツ', recommended: true },
+      { icon: '🧥', name: 'outfit.jacket', recommended: true, reason: 'outfit.tempOptimal' },
+      { icon: '👕', name: 'outfit.longSleeveShirt', recommended: true },
+      { icon: '👖', name: 'outfit.pants', recommended: true },
     ]
-    summary = `気温${temp}°Cと肌寒め → ライトジャケットがおすすめ`
+    summaryBaseKey = 'outfitSummary.cool'
   } else if (temp >= 8) {
     baseItems = [
-      { icon: '🧥', name: 'コート', recommended: true, reason: '防寒に必要' },
-      { icon: '🧶', name: 'セーター', recommended: true },
-      { icon: '👖', name: 'パンツ', recommended: true },
+      { icon: '🧥', name: 'outfit.coat', recommended: true, reason: 'outfit.warmthNeeded' },
+      { icon: '🧶', name: 'outfit.sweater', recommended: true },
+      { icon: '👖', name: 'outfit.pants', recommended: true },
     ]
-    summary = `気温${temp}°Cと寒い → コートが必要`
+    summaryBaseKey = 'outfitSummary.cold'
   } else {
     baseItems = [
-      { icon: '🧥', name: '厚手コート', recommended: true, reason: '防寒必須' },
-      { icon: '🧶', name: 'セーター', recommended: true },
-      { icon: '🧣', name: 'マフラー', recommended: true },
-      { icon: '🧤', name: '手袋', recommended: true },
+      { icon: '🧥', name: 'outfit.heavyCoat', recommended: true, reason: 'outfit.warmthEssential' },
+      { icon: '🧶', name: 'outfit.sweater', recommended: true },
+      { icon: '🧣', name: 'outfit.scarf', recommended: true },
+      { icon: '🧤', name: 'outfit.gloves', recommended: true },
     ]
-    summary = `気温${temp}°Cと厳しい寒さ → しっかり防寒を`
+    summaryBaseKey = 'outfitSummary.veryCold'
   }
 
   baseItems.push({
     icon: '😷',
-    name: 'マスク',
+    name: 'outfit.mask',
     recommended: needsMask,
-    reason: needsMask ? '花粉対策' : undefined,
+    reason: needsMask ? 'outfit.pollenProtection' : undefined,
   })
   baseItems.push({
     icon: '🕶️',
-    name: 'サングラス',
+    name: 'outfit.sunglasses',
     recommended: needsGlasses,
-    reason: needsGlasses ? '花粉対策' : undefined,
+    reason: needsGlasses ? 'outfit.pollenProtection' : undefined,
   })
 
-  if (needsMask) {
-    const pollenDesc = needsGlasses ? '極めて多い' : '多め'
-    summary += `＋マスク必須（花粉${pollenDesc}）`
+  const summary: OutfitSummary = {
+    baseKey: summaryBaseKey,
+    params: { temp },
+    maskSuffixKey: needsMask
+      ? needsGlasses
+        ? 'outfitSummary.maskSuffixExtreme'
+        : 'outfitSummary.maskSuffixHigh'
+      : undefined,
   }
 
   return { items: baseItems, summary }
@@ -122,16 +136,16 @@ export function isLaundryOk(pollenLevel: PollenLevel, weatherCode: number): bool
   return pollenLevel <= 2 && weatherCode < 51
 }
 
-export function getUVLabel(uvIndex: number): { value: string; level: 'low' | 'medium' | 'high' } {
-  if (uvIndex <= 2) return { value: '弱い', level: 'low' }
-  if (uvIndex <= 5) return { value: '中程度', level: 'medium' }
-  return { value: '強い', level: 'high' }
+export function getUVLabel(uvIndex: number): { valueKey: string; level: 'low' | 'medium' | 'high' } {
+  if (uvIndex <= 2) return { valueKey: 'uv.low', level: 'low' }
+  if (uvIndex <= 5) return { valueKey: 'uv.medium', level: 'medium' }
+  return { valueKey: 'uv.high', level: 'high' }
 }
 
-export function getJapaneseDayOfWeek(dateStr: string): string {
-  const days = ['日', '月', '火', '水', '木', '金', '土']
+/** Returns day-of-week index (0=Sun … 6=Sat) */
+export function getDayIndex(dateStr: string): number {
   const [y, m, d] = dateStr.split('-').map(Number)
-  return days[new Date(y, m - 1, d).getDay()]
+  return new Date(y, m - 1, d).getDay()
 }
 
 export function formatDate(dateStr: string): string {

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   View,
   Text,
@@ -12,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocationContext } from '@/contexts/LocationContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useWeatherData } from '@/hooks/useWeatherData'
-import { getPollenColor, POLLEN_LABELS, type PollenLevel } from '@/lib/weather-utils'
+import { getPollenColor, POLLEN_LABEL_KEYS, type PollenLevel } from '@/lib/weather-utils'
 
 function PollenDot({ level }: { level: PollenLevel }) {
   return (
@@ -51,6 +52,7 @@ function TempBar({ low, high, dayLow, dayHigh, isDark }: {
 
 export default function WeeklyScreen() {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
   const { location, loading: locationLoading } = useLocationContext()
   const { data, loading: dataLoading, error, refetch } = useWeatherData(
     location?.lat ?? null,
@@ -78,10 +80,10 @@ export default function WeeklyScreen() {
     return (
       <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <Text style={[styles.errorText, isDark && styles.textDark]}>
-          {error ?? 'データの取得に失敗しました'}
+          {error ?? t('common.error')}
         </Text>
         <Pressable style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryText}>再試行</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </Pressable>
       </SafeAreaView>
     )
@@ -101,20 +103,20 @@ export default function WeeklyScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        <Text style={[styles.header, isDark && styles.textDark]}>週間予報</Text>
+        <Text style={[styles.header, isDark && styles.textDark]}>{t('weekly.header')}</Text>
         <Text style={[styles.locationText, isDark && styles.textMuted]}>
           📍 {data.location}
         </Text>
 
         {/* Pollen legend */}
         <View style={[styles.card, isDark && styles.cardDark]}>
-          <Text style={[styles.legendTitle, isDark && styles.textDark]}>花粉レベル</Text>
+          <Text style={[styles.legendTitle, isDark && styles.textDark]}>{t('weekly.pollenLegend')}</Text>
           <View style={styles.legendRow}>
             {([1, 2, 3, 4, 5] as PollenLevel[]).map((level) => (
               <View key={level} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: getPollenColor(level) }]} />
                 <Text style={[styles.legendText, isDark && styles.textMuted]}>
-                  {POLLEN_LABELS[level]}
+                  {t(POLLEN_LABEL_KEYS[level])}
                 </Text>
               </View>
             ))}
@@ -122,6 +124,19 @@ export default function WeeklyScreen() {
         </View>
 
         <View style={[styles.card, isDark && styles.cardDark]}>
+          {/* Column headers */}
+          <View style={styles.headerRow}>
+            <Text style={[styles.headerColText, isDark && styles.textMuted, { width: 52 }]}>{t('weekly.dayCol')}</Text>
+            <Text style={[styles.headerColText, isDark && styles.textMuted, { width: 32, textAlign: 'center' }]}>{t('weekly.weatherCol')}</Text>
+            <Text style={[styles.headerColText, isDark && styles.textMuted, { width: 24, textAlign: 'center' }]}>{t('weekly.pollenCol')}</Text>
+            <View style={styles.tempHeaderContainer}>
+              <Text style={[styles.headerText, isDark && styles.textMuted]}>{weekLow}°</Text>
+              <Text style={[styles.headerTextCenter, isDark && styles.textMuted]}>{t('weekly.tempRange')}</Text>
+              <Text style={[styles.headerText, isDark && styles.textMuted]}>{weekHigh}°</Text>
+            </View>
+          </View>
+          <View style={[styles.divider, isDark && styles.dividerDark]} />
+
           {forecast.map((day, i) => (
             <View key={day.date}>
               {i > 0 && <View style={[styles.divider, isDark && styles.dividerDark]} />}
@@ -132,7 +147,7 @@ export default function WeeklyScreen() {
                     isDark && styles.textDark,
                     i === 0 && styles.dayNameToday,
                   ]}>
-                    {i === 0 ? '今日' : `${day.day}曜`}
+                    {i === 0 ? t('common.today') : t('weekly.dayFormat', { day: t(`day.${day.dayIndex}`) })}
                   </Text>
                   <Text style={[styles.dateText, isDark && styles.textMuted]}>
                     {day.date}
@@ -199,6 +214,34 @@ const styles = StyleSheet.create({
   },
   cardDark: {
     backgroundColor: '#1a1a1a',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 8,
+    gap: 10,
+  },
+  tempHeaderContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerColText: {
+    fontSize: 11,
+    color: '#aaa',
+  },
+  headerText: {
+    fontSize: 11,
+    color: '#aaa',
+    width: 30,
+    textAlign: 'center',
+  },
+  headerTextCenter: {
+    flex: 1,
+    fontSize: 11,
+    color: '#aaa',
+    textAlign: 'center',
   },
   dayRow: {
     flexDirection: 'row',

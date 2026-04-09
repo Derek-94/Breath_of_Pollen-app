@@ -1,12 +1,14 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface HourlyChartProps {
-  data: { hour: string; temp: number; icon: string }[]
+  data: { hour: number; temp: number; icon: string }[]
 }
 
 export function HourlyChart({ data }: HourlyChartProps) {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
 
   if (data.length === 0) return null
 
@@ -17,7 +19,7 @@ export function HourlyChart({ data }: HourlyChartProps) {
 
   return (
     <View style={[styles.card, isDark && styles.cardDark]}>
-      <Text style={[styles.title, isDark && styles.textDark]}>⏰ 時間別</Text>
+      <Text style={[styles.title, isDark && styles.textDark]}>{t('hourly.title')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.chartRow}>
           {data.map((item, i) => {
@@ -35,7 +37,7 @@ export function HourlyChart({ data }: HourlyChartProps) {
                 />
                 <Text style={styles.chartIcon}>{item.icon}</Text>
                 <Text style={[styles.chartHour, isDark && styles.textMutedDark]}>
-                  {item.hour}
+                  {t('hourly.hourFormat', { h: item.hour })}
                 </Text>
               </View>
             )

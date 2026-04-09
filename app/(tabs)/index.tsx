@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react'
+import { usePostHog } from 'posthog-react-native'
+import { useTranslation } from 'react-i18next'
 import {
   View,
   Text,
@@ -38,6 +40,8 @@ function Logo() {
 
 export default function TodayScreen() {
   const { isDark } = useTheme()
+  const posthog = usePostHog()
+  const { t } = useTranslation()
   const { location, loading: locationLoading, error: locationError, setManualLocation } = useLocationContext()
   const { data, loading: dataLoading, error: dataError, pollenUnavailable, refetch } = useWeatherData(
     location?.lat ?? null,
@@ -83,7 +87,7 @@ export default function TodayScreen() {
       <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <ActivityIndicator size="large" color={isDark ? '#fb923c' : '#f87171'} />
         <Text style={[styles.loadingText, isDark && styles.textMutedDark]}>
-          天気情報を取得中...
+          {t('common.loading')}
         </Text>
       </SafeAreaView>
     )
@@ -93,14 +97,14 @@ export default function TodayScreen() {
     return (
       <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <Text style={[styles.errorText, isDark && styles.textDark]}>
-          {dataError ?? 'データの取得に失敗しました'}
+          {dataError ?? t('common.error')}
         </Text>
         <Pressable style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryText}>再試行</Text>
+          <Text style={styles.retryText}>{t('common.retry')}</Text>
         </Pressable>
         <Pressable style={styles.pickerLink} onPress={() => setShowPicker(true)}>
           <Text style={[styles.pickerLinkText, isDark && styles.textMutedDark]}>
-            都道府県から選ぶ
+            {t('common.selectPrefecture')}
           </Text>
         </Pressable>
       </SafeAreaView>
@@ -136,7 +140,7 @@ export default function TodayScreen() {
               <Text style={[styles.tempUnit, isDark && styles.textMutedDark]}>°C</Text>
             </View>
             <Text style={[styles.weatherDesc, isDark && styles.textMutedDark]}>
-              {data.description} · {data.high}° / {data.low}°
+              {t(data.descriptionKey)} · {data.high}° / {data.low}°
             </Text>
           </View>
           <Text style={styles.weatherEmoji}>
@@ -165,16 +169,19 @@ export default function TodayScreen() {
           <OutfitCard
             items={data.outfitItems}
             summary={data.outfitSummary}
-            onPress={() => setShowOutfitDetail(true)}
+            onPress={() => {
+              posthog.capture('outfit_detail_opened', { pollen_level: data.pollenOverall })
+              setShowOutfitDetail(true)
+            }}
           />
 
           <View style={styles.infoRow}>
-            <InfoCard type="uv" value={uvLabel.value} label="UV指数" level={uvLabel.level} />
-            <InfoCard type="pm25" value="良好" label="PM2.5" level="low" />
+            <InfoCard type="uv" value={t(uvLabel.valueKey)} label={t('uv.label')} level={uvLabel.level} />
+            <InfoCard type="pm25" value={t('pm25.good')} label={t('pm25.label')} level="low" />
             <InfoCard
               type="humidity"
               value={`${data.humidity}%`}
-              label="湿度"
+              label={t('humidity.label')}
               level={data.humidity > 70 ? 'high' : data.humidity > 40 ? 'medium' : 'low'}
             />
           </View>

@@ -1,16 +1,22 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native'
-import { type OutfitItem } from '@/lib/weather-utils'
+import { useTranslation } from 'react-i18next'
+import { type OutfitItem, type OutfitSummary } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface OutfitCardProps {
   items: OutfitItem[]
-  summary: string
+  summary: OutfitSummary
   onPress: () => void
 }
 
 export function OutfitCard({ items, summary, onPress }: OutfitCardProps) {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
   const recommended = items.filter((i) => i.recommended)
+
+  const summaryText =
+    t(summary.baseKey, summary.params) +
+    (summary.maskSuffixKey ? t(summary.maskSuffixKey) : '')
 
   return (
     <Pressable
@@ -21,20 +27,20 @@ export function OutfitCard({ items, summary, onPress }: OutfitCardProps) {
         pressed && styles.cardPressed,
       ]}
     >
-      <Text style={[styles.title, isDark && styles.textDark]}>👔 おすすめコーデ</Text>
-      <Text style={[styles.summary, isDark && styles.textMutedDark]}>{summary}</Text>
+      <Text style={[styles.title, isDark && styles.textDark]}>{t('outfit.cardTitle')}</Text>
+      <Text style={[styles.summary, isDark && styles.textMutedDark]}>{summaryText}</Text>
 
       <View style={styles.itemRow}>
         {recommended.map((item) => (
           <View key={item.name} style={[styles.itemChip, isDark && styles.chipDark]}>
             <Text style={styles.itemIcon}>{item.icon}</Text>
-            <Text style={[styles.itemName, isDark && styles.textDark]}>{item.name}</Text>
+            <Text style={[styles.itemName, isDark && styles.textDark]}>{t(item.name)}</Text>
           </View>
         ))}
       </View>
 
       <Text style={[styles.tapHint, isDark && styles.textMutedDark]}>
-        タップして詳細を見る →
+        {t('outfit.tapHint')}
       </Text>
     </Pressable>
   )

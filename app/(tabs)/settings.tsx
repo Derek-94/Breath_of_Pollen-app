@@ -1,4 +1,7 @@
 import { useState, useCallback } from 'react'
+import { usePostHog } from 'posthog-react-native'
+import { useTranslation } from 'react-i18next'
+import { useFocusEffect } from 'expo-router'
 import {
   View,
   Text,
@@ -12,17 +15,31 @@ import Constants from 'expo-constants'
 import { useLocationContext } from '@/contexts/LocationContext'
 import { useTheme, type ThemeMode } from '@/contexts/ThemeContext'
 import { LocationPicker } from '@/components/LocationPicker'
+import {
+  changeLanguage,
+  LANGUAGE_LABELS,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from '@/lib/i18n'
 
-const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: 'system', label: 'システム' },
-  { value: 'light', label: 'ライト' },
-  { value: 'dark', label: 'ダーク' },
+const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
+  { value: 'system', labelKey: 'settings.themeSystem' },
+  { value: 'light', labelKey: 'settings.themeLight' },
+  { value: 'dark', labelKey: 'settings.themeDark' },
 ]
 
 export default function SettingsScreen() {
   const { isDark, themeMode, setThemeMode } = useTheme()
+  const posthog = usePostHog()
+  const { t, i18n } = useTranslation()
   const { location, setManualLocation, clearSavedLocation } = useLocationContext()
   const [showPicker, setShowPicker] = useState(false)
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => setShowPicker(false)
+    }, [])
+  )
 
   const handlePrefectureSelect = useCallback(
     (name: string, lat: number, lon: number) => {
@@ -36,6 +53,11 @@ export default function SettingsScreen() {
     await clearSavedLocation()
   }, [clearSavedLocation])
 
+  const handleLanguageChange = useCallback(async (lang: SupportedLanguage) => {
+    posthog.capture('language_changed', { language: lang })
+    await changeLanguage(lang)
+  }, [posthog])
+
   const appVersion = Constants.expoConfig?.version ?? '1.0.0'
 
   if (showPicker) {
@@ -43,7 +65,7 @@ export default function SettingsScreen() {
       <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
         <View style={styles.pickerHeader}>
           <Pressable onPress={() => setShowPicker(false)}>
-            <Text style={[styles.backText, isDark && styles.tintDark]}>← 戻る</Text>
+            <Text style={[styles.backText, isDark && styles.tintDark]}>{t('common.back')}</Text>
           </Pressable>
         </View>
         <LocationPicker onSelect={handlePrefectureSelect} />
@@ -54,16 +76,16 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.header, isDark && styles.textDark]}>設定</Text>
+        <Text style={[styles.header, isDark && styles.textDark]}>{t('settings.header')}</Text>
 
         {/* Location section */}
         <View style={[styles.card, isDark && styles.cardDark]}>
-          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>地域</Text>
+          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.location')}</Text>
 
           <View style={styles.row}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>現在の地域</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.currentLocation')}</Text>
             <Text style={[styles.value, isDark && styles.textDark]}>
-              {location?.name ?? '自動検出'}
+              {location?.name ?? t('common.autoDetect')}
             </Text>
           </View>
 
@@ -71,13 +93,13 @@ export default function SettingsScreen() {
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
             onPress={() => setShowPicker(true)}
           >
-            <Text style={styles.buttonText}>都道府県を変更</Text>
+            <Text style={styles.buttonText}>{t('settings.changeLocation')}</Text>
           </Pressable>
 
           {location?.name && (
             <Pressable onPress={handleResetLocation}>
               <Text style={[styles.resetText, isDark && styles.tintDark]}>
-                GPS自動検出に戻す
+                {t('settings.resetLocation')}
               </Text>
             </Pressable>
           )}
@@ -85,7 +107,7 @@ export default function SettingsScreen() {
 
         {/* Theme section */}
         <View style={[styles.card, isDark && styles.cardDark]}>
-          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>テーマ</Text>
+          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.theme')}</Text>
           <View style={styles.themeRow}>
             {THEME_OPTIONS.map((opt) => (
               <Pressable
@@ -96,14 +118,44 @@ export default function SettingsScreen() {
                   themeMode === opt.value && styles.themeChipActive,
                   themeMode === opt.value && isDark && styles.themeChipActiveDark,
                 ]}
-                onPress={() => setThemeMode(opt.value)}
+                onPress={() => {
+                  posthog.capture('theme_changed', { theme: opt.value })
+                  setThemeMode(opt.value)
+                }}
               >
                 <Text style={[
                   styles.themeChipText,
                   isDark && styles.textMuted,
                   themeMode === opt.value && styles.themeChipTextActive,
                 ]}>
-                  {opt.label}
+                  {t(opt.labelKey)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Language section */}
+        <View style={[styles.card, isDark && styles.cardDark]}>
+          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.language')}</Text>
+          <View style={styles.themeRow}>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <Pressable
+                key={lang}
+                style={[
+                  styles.themeChip,
+                  isDark && styles.themeChipDark,
+                  i18n.language === lang && styles.themeChipActive,
+                  i18n.language === lang && isDark && styles.themeChipActiveDark,
+                ]}
+                onPress={() => handleLanguageChange(lang)}
+              >
+                <Text style={[
+                  styles.themeChipText,
+                  isDark && styles.textMuted,
+                  i18n.language === lang && styles.themeChipTextActive,
+                ]}>
+                  {LANGUAGE_LABELS[lang]}
                 </Text>
               </Pressable>
             ))}
@@ -112,22 +164,22 @@ export default function SettingsScreen() {
 
         {/* App info section */}
         <View style={[styles.card, isDark && styles.cardDark]}>
-          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>アプリ情報</Text>
+          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.appInfo')}</Text>
 
           <View style={styles.row}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>アプリ名</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.appName')}</Text>
             <Text style={[styles.value, isDark && styles.textDark]}>花粉の呼吸</Text>
           </View>
           <View style={[styles.divider, isDark && styles.dividerDark]} />
 
           <View style={styles.row}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>バージョン</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.version')}</Text>
             <Text style={[styles.value, isDark && styles.textDark]}>v{appVersion}</Text>
           </View>
           <View style={[styles.divider, isDark && styles.dividerDark]} />
 
           <View style={styles.row}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>データ提供</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.dataProvider')}</Text>
             <Text style={[styles.value, isDark && styles.textDark]}>
               Open-Meteo / Google Pollen
             </Text>
@@ -138,13 +190,13 @@ export default function SettingsScreen() {
             style={styles.row}
             onPress={() => Linking.openURL('https://github.com/Derek-94/Breath_of_Pollen-app')}
           >
-            <Text style={[styles.label, isDark && styles.textMuted]}>ソースコード</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.sourceCode')}</Text>
             <Text style={[styles.linkText, isDark && styles.tintDark]}>GitHub →</Text>
           </Pressable>
         </View>
 
         <Text style={[styles.footer, isDark && styles.textMuted]}>
-          Made with ❤️ for allergy sufferers
+          {t('settings.footer')}
         </Text>
       </ScrollView>
     </SafeAreaView>

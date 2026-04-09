@@ -1,10 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { type PollenLevel, getPollenColor } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface PollenCardProps {
-  cedar: { type: string; level: PollenLevel; label: string }
-  cypress: { type: string; level: PollenLevel; label: string }
+  cedar: { typeKey: string; level: PollenLevel; labelKey: string }
+  cypress: { typeKey: string; level: PollenLevel; labelKey: string }
   overallLevel: PollenLevel
 }
 
@@ -26,14 +27,15 @@ function PollenBar({ level, isDark }: { level: PollenLevel; isDark: boolean }) {
 
 export function PollenCard({ cedar, cypress, overallLevel }: PollenCardProps) {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
 
   return (
     <View style={[styles.card, isDark && styles.cardDark]}>
       <View style={styles.header}>
-        <Text style={[styles.title, isDark && styles.textDark]}>🌿 花粉</Text>
+        <Text style={[styles.title, isDark && styles.textDark]}>{t('pollen.title')}</Text>
         <View style={[styles.badge, { backgroundColor: getPollenColor(overallLevel) + '20' }]}>
           <Text style={[styles.badgeText, { color: getPollenColor(overallLevel) }]}>
-            {cedar.label}
+            {t(cedar.labelKey)}
           </Text>
         </View>
       </View>
@@ -41,19 +43,19 @@ export function PollenCard({ cedar, cypress, overallLevel }: PollenCardProps) {
       <View style={styles.row}>
         <View style={styles.pollenItem}>
           <Text style={[styles.pollenType, isDark && styles.textMutedDark]}>
-            {cedar.type}
+            {t(cedar.typeKey)}
           </Text>
           <Text style={[styles.pollenLabel, isDark && styles.textDark]}>
-            {cedar.label}
+            {t(cedar.labelKey)}
           </Text>
           <PollenBar level={cedar.level} isDark={isDark} />
         </View>
         <View style={styles.pollenItem}>
           <Text style={[styles.pollenType, isDark && styles.textMutedDark]}>
-            {cypress.type}
+            {t(cypress.typeKey)}
           </Text>
           <Text style={[styles.pollenLabel, isDark && styles.textDark]}>
-            {cypress.label}
+            {t(cypress.labelKey)}
           </Text>
           <PollenBar level={cypress.level} isDark={isDark} />
         </View>

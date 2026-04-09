@@ -1,5 +1,12 @@
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native'
+import { usePostHog } from 'posthog-react-native'
+import { useTranslation } from 'react-i18next'
 import { PREFECTURE_COORDS, REGIONS } from '@/lib/prefecture-coords'
+import {
+  PREFECTURE_ROMANIZED,
+  PREFECTURE_HIGHLIGHT_EMOJI,
+  REGIONS_ROMANIZED,
+} from '@/lib/prefecture-i18n'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface LocationPickerProps {
@@ -9,6 +16,24 @@ interface LocationPickerProps {
 
 export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerProps) {
   const { isDark } = useTheme()
+  const posthog = usePostHog()
+  const { t, i18n } = useTranslation()
+
+  const isJapanese = i18n.language === 'ja'
+
+  function getDisplayName(jaKey: string): string {
+    if (isJapanese) return jaKey
+    return PREFECTURE_ROMANIZED[jaKey] ?? jaKey
+  }
+
+  function getRegionDisplayName(jaKey: string): string {
+    if (isJapanese) return jaKey
+    return REGIONS_ROMANIZED[jaKey] ?? jaKey
+  }
+
+  function getHighlightEmoji(jaKey: string): string | undefined {
+    return PREFECTURE_HIGHLIGHT_EMOJI[jaKey]
+  }
 
   return (
     <ScrollView
@@ -19,35 +44,54 @@ export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerPr
       {pollenUnavailable && (
         <View style={styles.warning}>
           <Text style={styles.warningText}>
-            ⚠️ この地域では花粉データが利用できません。日本の都道府県を選択してください。
+            {t('locationPicker.warning')}
           </Text>
         </View>
       )}
 
       <Text style={[styles.heading, isDark && styles.textDark]}>
-        📍 都道府県を選択
+        {t('locationPicker.heading')}
       </Text>
       <Text style={[styles.subheading, isDark && styles.textMuted]}>
-        花粉・天気情報を表示する地域を選んでください
+        {t('locationPicker.subheading')}
       </Text>
 
       {Object.entries(REGIONS).map(([region, prefectures]) => (
         <View key={region} style={styles.regionBlock}>
-          <Text style={[styles.regionTitle, isDark && styles.textMuted]}>{region}</Text>
+          <Text style={[styles.regionTitle, isDark && styles.textMuted]}>
+            {getRegionDisplayName(region)}
+          </Text>
           <View style={styles.grid}>
-            {prefectures.map((name) => {
-              const coords = PREFECTURE_COORDS[name]
+            {prefectures.map((jaKey) => {
+              const coords = PREFECTURE_COORDS[jaKey]
+              const displayName = getDisplayName(jaKey)
+              const emoji = !isJapanese ? getHighlightEmoji(jaKey) : undefined
+              const isHighlight = !!emoji
+
               return (
                 <Pressable
-                  key={name}
+                  key={jaKey}
                   style={({ pressed }) => [
                     styles.chip,
                     isDark && styles.chipDark,
+                    isHighlight && styles.chipHighlight,
+                    isHighlight && isDark && styles.chipHighlightDark,
                     pressed && styles.chipPressed,
                   ]}
-                  onPress={() => onSelect(name, coords.lat, coords.lon)}
+                  onPress={() => {
+                    posthog.capture('location_selected', { prefecture: jaKey })
+                    // Pass romanized name as display name; coords come from Japanese key lookup
+                    onSelect(displayName, coords.lat, coords.lon)
+                  }}
                 >
-                  <Text style={[styles.chipText, isDark && styles.textDark]}>{name}</Text>
+                  {emoji && <Text style={styles.chipEmoji}>{emoji}</Text>}
+                  <Text style={[
+                    styles.chipText,
+                    isDark && styles.textDark,
+                    isHighlight && styles.chipTextHighlight,
+                  ]}>
+                    {displayName}
+                  </Text>
                 </Pressable>
               )
             })}
@@ -108,20 +152,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f0f0f0',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    gap: 4,
   },
   chipDark: {
     backgroundColor: '#2a2a2a',
+  },
+  chipHighlight: {
+    backgroundColor: '#fff0eb',
+    borderWidth: 1,
+    borderColor: '#fb923c40',
+  },
+  chipHighlightDark: {
+    backgroundColor: '#2a1f18',
+    borderWidth: 1,
+    borderColor: '#fb923c40',
   },
   chipPressed: {
     opacity: 0.7,
     transform: [{ scale: 0.96 }],
   },
+  chipEmoji: {
+    fontSize: 13,
+  },
   chipText: {
     fontSize: 14,
     color: '#333',
+  },
+  chipTextHighlight: {
+    fontWeight: '600',
   },
 })

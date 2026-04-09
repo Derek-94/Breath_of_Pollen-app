@@ -12,7 +12,8 @@ import {
   type PanResponderGestureState,
 } from 'react-native'
 import { useRef, useEffect } from 'react'
-import { type OutfitItem, type PollenLevel, POLLEN_LABELS, getPollenColor } from '@/lib/weather-utils'
+import { useTranslation } from 'react-i18next'
+import { type OutfitItem, type PollenLevel, POLLEN_LABEL_KEYS, getPollenColor } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -29,6 +30,7 @@ interface OutfitDetailProps {
 
 export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClose }: OutfitDetailProps) {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const sheetTranslateY = useRef(new Animated.Value(SHEET_MAX)).current
 
@@ -114,7 +116,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={[styles.title, isDark && styles.textDark]}>今日のおすすめコーデ</Text>
+            <Text style={[styles.title, isDark && styles.textDark]}>{t('outfit.detailTitle')}</Text>
 
             <View style={styles.metaRow}>
               <Text style={[styles.meta, isDark && styles.textMuted]}>
@@ -122,7 +124,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
               </Text>
               <View style={[styles.pollenBadge, { backgroundColor: getPollenColor(pollenLevel) + '20' }]}>
                 <Text style={{ color: getPollenColor(pollenLevel), fontSize: 12, fontWeight: '600' }}>
-                  花粉: {POLLEN_LABELS[pollenLevel]}
+                  {t('outfit.pollenLabel', { level: t(POLLEN_LABEL_KEYS[pollenLevel]) })}
                 </Text>
               </View>
             </View>
@@ -131,13 +133,13 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
               <View key={item.name} style={[styles.itemRow, isDark && styles.itemRowDark]}>
                 <Text style={styles.itemIcon}>{item.icon}</Text>
                 <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, isDark && styles.textDark]}>{item.name}</Text>
+                  <Text style={[styles.itemName, isDark && styles.textDark]}>{t(item.name)}</Text>
                   {item.reason && (
-                    <Text style={[styles.itemReason, isDark && styles.textMuted]}>{item.reason}</Text>
+                    <Text style={[styles.itemReason, isDark && styles.textMuted]}>{t(item.reason)}</Text>
                   )}
                 </View>
                 <Text style={item.recommended ? styles.recommended : styles.optional}>
-                  {item.recommended ? 'おすすめ' : '任意'}
+                  {item.recommended ? t('outfit.recommended') : t('outfit.optional')}
                 </Text>
               </View>
             ))}
@@ -146,19 +148,17 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
               <Text style={styles.laundryIcon}>{laundryOk ? '👕' : '🏠'}</Text>
               <View>
                 <Text style={[styles.laundryTitle, isDark && styles.textDark]}>
-                  洗濯物: {laundryOk ? '外干しOK' : '部屋干し推奨'}
+                  {t('laundry.label', { status: t(laundryOk ? 'laundry.ok' : 'laundry.indoor') })}
                 </Text>
                 <Text style={[styles.laundryDesc, isDark && styles.textMuted]}>
-                  {laundryOk
-                    ? '花粉少なめ＆晴れ予報で安心'
-                    : '花粉が多いため室内干しがおすすめ'}
+                  {t(laundryOk ? 'laundry.okDesc' : 'laundry.indoorDesc')}
                 </Text>
               </View>
             </View>
           </ScrollView>
 
           <Pressable style={styles.closeButton} onPress={dismiss}>
-            <Text style={styles.closeText}>閉じる</Text>
+            <Text style={styles.closeText}>{t('outfit.close')}</Text>
           </Pressable>
         </Animated.View>
       </View>
