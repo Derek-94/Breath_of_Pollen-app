@@ -1,0 +1,108 @@
+import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native'
+import { type OutfitItem } from '@/lib/weather-utils'
+
+interface OutfitCardProps {
+  items: OutfitItem[]
+  summary: string
+  onPress: () => void
+}
+
+export function OutfitCard({ items, summary, onPress }: OutfitCardProps) {
+  const colorScheme = useColorScheme()
+  const isDark = colorScheme === 'dark'
+  const recommended = items.filter((i) => i.recommended)
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        isDark && styles.cardDark,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      <Text style={[styles.title, isDark && styles.textDark]}>👔 おすすめコーデ</Text>
+      <Text style={[styles.summary, isDark && styles.textMutedDark]}>{summary}</Text>
+
+      <View style={styles.itemRow}>
+        {recommended.map((item) => (
+          <View key={item.name} style={[styles.itemChip, isDark && styles.chipDark]}>
+            <Text style={styles.itemIcon}>{item.icon}</Text>
+            <Text style={[styles.itemName, isDark && styles.textDark]}>{item.name}</Text>
+          </View>
+        ))}
+      </View>
+
+      <Text style={[styles.tapHint, isDark && styles.textMutedDark]}>
+        タップして詳細を見る →
+      </Text>
+    </Pressable>
+  )
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardDark: {
+    backgroundColor: '#1e1e1e',
+  },
+  cardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111',
+    marginBottom: 4,
+  },
+  summary: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
+  },
+  textDark: {
+    color: '#eee',
+  },
+  textMutedDark: {
+    color: '#999',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  itemChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  chipDark: {
+    backgroundColor: '#2a2a2a',
+  },
+  itemIcon: {
+    fontSize: 16,
+  },
+  itemName: {
+    fontSize: 13,
+    color: '#333',
+  },
+  tapHint: {
+    fontSize: 12,
+    color: '#aaa',
+    textAlign: 'right',
+  },
+})
