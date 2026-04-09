@@ -5,9 +5,19 @@ import {
   Pressable,
   ScrollView,
   Modal,
+  Animated,
+  PanResponder,
+  Dimensions,
+  type GestureResponderEvent,
+  type PanResponderGestureState,
 } from 'react-native'
+import { useRef, useEffect } from 'react'
 import { type OutfitItem, type PollenLevel, POLLEN_LABELS, getPollenColor } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
+
+const SCREEN_HEIGHT = Dimensions.get('window').height
+const SHEET_MAX = SCREEN_HEIGHT * 0.8
+const DISMISS_THRESHOLD = 120
 
 interface OutfitDetailProps {
   items: OutfitItem[]
@@ -19,13 +29,89 @@ interface OutfitDetailProps {
 
 export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClose }: OutfitDetailProps) {
   const { isDark } = useTheme()
+  const backdropOpacity = useRef(new Animated.Value(0)).current
+  const sheetTranslateY = useRef(new Animated.Value(SHEET_MAX)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(sheetTranslateY, {
+        toValue: 0,
+        damping: 25,
+        stiffness: 200,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [])
+
+  const dismiss = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: SHEET_MAX,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose())
+  }
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_e: GestureResponderEvent, gs: PanResponderGestureState) => {
+        if (gs.dy > 0) {
+          sheetTranslateY.setValue(gs.dy)
+          backdropOpacity.setValue(1 - gs.dy / SHEET_MAX)
+        }
+      },
+      onPanResponderRelease: (_e: GestureResponderEvent, gs: PanResponderGestureState) => {
+        if (gs.dy > DISMISS_THRESHOLD || gs.vy > 0.5) {
+          dismiss()
+        } else {
+          Animated.parallel([
+            Animated.spring(sheetTranslateY, {
+              toValue: 0,
+              damping: 25,
+              stiffness: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(backdropOpacity, {
+              toValue: 1,
+              duration: 150,
+              useNativeDriver: true,
+            }),
+          ]).start()
+        }
+      },
+    })
+  ).current
 
   return (
-    <Modal animationType="fade" transparent statusBarTranslucent>
+    <Modal animationType="none" transparent statusBarTranslucent>
       <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.sheet, isDark && styles.sheetDark]}>
-          <View style={styles.handle} />
+        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.sheet,
+            isDark && styles.sheetDark,
+            { transform: [{ translateY: sheetTranslateY }] },
+          ]}
+        >
+          <View style={styles.handleZone} {...panResponder.panHandlers}>
+            <View style={styles.handle} />
+          </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={[styles.title, isDark && styles.textDark]}>今日のおすすめコーデ</Text>
@@ -56,7 +142,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
               </View>
             ))}
 
-            <View style={[styles.laundryCard, isDark && styles.itemRowDark]}>
+            <View style={[styles.laundryCard, isDark && styles.laundryCardDark]}>
               <Text style={styles.laundryIcon}>{laundryOk ? '👕' : '🏠'}</Text>
               <View>
                 <Text style={[styles.laundryTitle, isDark && styles.textDark]}>
@@ -71,10 +157,10 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
             </View>
           </ScrollView>
 
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable style={styles.closeButton} onPress={dismiss}>
             <Text style={styles.closeText}>閉じる</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   )
@@ -99,13 +185,18 @@ const styles = StyleSheet.create({
   sheetDark: {
     backgroundColor: '#1e1e1e',
   },
+  handleZone: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginHorizontal: -20,
+    marginTop: -20,
+    paddingTop: 20,
+  },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#ddd',
-    alignSelf: 'center',
-    marginBottom: 16,
   },
   title: {
     fontSize: 20,
@@ -178,6 +269,9 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: '#f8f8f8',
     borderRadius: 12,
+  },
+  laundryCardDark: {
+    backgroundColor: '#2a2a2a',
   },
   laundryIcon: {
     fontSize: 28,
