@@ -1,6 +1,12 @@
 const en = {
   appName: 'Breath of Pollen',
 
+  tabs: {
+    today: 'Today',
+    weekly: 'Weekly',
+    settings: 'Settings',
+  },
+
   common: {
     loading: 'Loading weather data...',
     error: 'Failed to load data',
@@ -18,11 +24,16 @@ const en = {
     high: 'High',
     veryHigh: 'Very High',
     extreme: 'Extreme',
+    offSeason: 'No pollen season right now',
+    offSeasonShort: 'Off-Season',
   },
 
   plant: {
     cedar: 'Japanese Cedar',
     cypress: 'Japanese Cypress',
+    pine: 'Pine',
+    oak: 'Oak',
+    weeds: 'Weeds',
   },
 
   weather: {
@@ -34,6 +45,7 @@ const en = {
     snowy: 'Snowy',
     showers: 'Showers',
     thunderstorm: 'Thunderstorm',
+    bringUmbrella: 'Bring an umbrella',
   },
 
   day: {
@@ -108,8 +120,11 @@ const en = {
   },
 
   pm25: {
-    label: 'PM2.5',
+    label: 'Fine Dust',
     good: 'Good',
+    moderate: 'Moderate',
+    bad: 'Bad',
+    unavailable: '-',
   },
 
   humidity: {
@@ -118,6 +133,7 @@ const en = {
 
   weekly: {
     header: 'Weekly Forecast',
+    krPollenDisclaimer: '* Pollen data is only available for 3 days in Korea.',
     dayCol: 'Date',
     weatherCol: 'Sky',
     pollenCol: '🌿',
@@ -141,14 +157,31 @@ const en = {
     appName: 'Breath of Pollen',
     version: 'Version',
     dataProvider: 'Data',
+    dataProviderKR: 'Korea Pollen (KMA)',
     sourceCode: 'Source Code',
     footer: 'Made with ❤️ for allergy sufferers',
   },
 
+  comparison: {
+    label: 'vs. Yesterday',
+    tempColder: '{{diff}}°C colder',
+    tempWarmer: '{{diff}}°C warmer',
+    tempSimilar: 'Similar temp',
+    pollenWorse: 'More pollen',
+    pollenBetter: 'Less pollen',
+    pollenSimilar: 'Similar pollen',
+  },
+
   locationPicker: {
-    heading: '📍 Select Prefecture',
+    heading: '📍 Select Region',
     subheading: 'Choose a region to display pollen and weather info',
-    warning: '⚠️ Pollen data is unavailable for your region. Please select a Japanese prefecture.',
+    warning: '⚠️ Pollen data is unavailable for your current location. Please select a region.',
+    japan: '🇯🇵 Japan',
+    korea: '🇰🇷 Korea',
+    confirmTitle: 'Change Region',
+    confirmMessage: 'Set location to {{name}}?',
+    confirmOk: 'Change',
+    confirmCancel: 'Cancel',
   },
 } as const
 

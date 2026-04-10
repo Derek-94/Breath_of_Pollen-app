@@ -24,11 +24,12 @@ interface OutfitDetailProps {
   items: OutfitItem[]
   temperature: { high: number; low: number }
   pollenLevel: PollenLevel
+  isOffSeason?: boolean
   laundryOk: boolean
   onClose: () => void
 }
 
-export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClose }: OutfitDetailProps) {
+export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, laundryOk, onClose }: OutfitDetailProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
   const backdropOpacity = useRef(new Animated.Value(0)).current
@@ -122,11 +123,19 @@ export function OutfitDetail({ items, temperature, pollenLevel, laundryOk, onClo
               <Text style={[styles.meta, isDark && styles.textMuted]}>
                 🌡 {temperature.high}° / {temperature.low}°
               </Text>
-              <View style={[styles.pollenBadge, { backgroundColor: getPollenColor(pollenLevel) + '20' }]}>
-                <Text style={{ color: getPollenColor(pollenLevel), fontSize: 12, fontWeight: '600' }}>
-                  {t('outfit.pollenLabel', { level: t(POLLEN_LABEL_KEYS[pollenLevel]) })}
-                </Text>
-              </View>
+              {isOffSeason ? (
+                <View style={[styles.pollenBadge, { backgroundColor: '#88888820' }]}>
+                  <Text style={{ color: '#888', fontSize: 12, fontWeight: '600' }}>
+                    {t('outfit.pollenLabel', { level: t('pollen.offSeasonShort') })}
+                  </Text>
+                </View>
+              ) : (
+                <View style={[styles.pollenBadge, { backgroundColor: getPollenColor(pollenLevel) + '20' }]}>
+                  <Text style={{ color: getPollenColor(pollenLevel), fontSize: 12, fontWeight: '600' }}>
+                    {t('outfit.pollenLabel', { level: t(POLLEN_LABEL_KEYS[pollenLevel]) })}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {items.map((item) => (

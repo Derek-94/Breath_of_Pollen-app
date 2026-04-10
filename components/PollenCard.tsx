@@ -1,11 +1,10 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { type PollenLevel, getPollenColor } from '@/lib/weather-utils'
+import { type PollenLevel, getPollenColor, POLLEN_LABEL_KEYS } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface PollenCardProps {
-  cedar: { typeKey: string; level: PollenLevel; labelKey: string }
-  cypress: { typeKey: string; level: PollenLevel; labelKey: string }
+  plants: { typeKey: string; level: PollenLevel; labelKey: string }[]
   overallLevel: PollenLevel
 }
 
@@ -25,41 +24,41 @@ function PollenBar({ level, isDark }: { level: PollenLevel; isDark: boolean }) {
   )
 }
 
-export function PollenCard({ cedar, cypress, overallLevel }: PollenCardProps) {
+export function PollenCard({ plants, overallLevel }: PollenCardProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
-
   return (
     <View style={[styles.card, isDark && styles.cardDark]}>
       <View style={styles.header}>
         <Text style={[styles.title, isDark && styles.textDark]}>{t('pollen.title')}</Text>
-        <View style={[styles.badge, { backgroundColor: getPollenColor(overallLevel) + '20' }]}>
-          <Text style={[styles.badgeText, { color: getPollenColor(overallLevel) }]}>
-            {t(cedar.labelKey)}
-          </Text>
-        </View>
+        {plants.length > 0 && (
+          <View style={[styles.badge, { backgroundColor: getPollenColor(overallLevel) + '20' }]}>
+            <Text style={[styles.badgeText, { color: getPollenColor(overallLevel) }]}>
+              {t(POLLEN_LABEL_KEYS[overallLevel])}
+            </Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.pollenItem}>
-          <Text style={[styles.pollenType, isDark && styles.textMutedDark]}>
-            {t(cedar.typeKey)}
-          </Text>
-          <Text style={[styles.pollenLabel, isDark && styles.textDark]}>
-            {t(cedar.labelKey)}
-          </Text>
-          <PollenBar level={cedar.level} isDark={isDark} />
+      {plants.length === 0 ? (
+        <Text style={[styles.offSeasonText, isDark && styles.textMutedDark]}>
+          {t('pollen.offSeason')}
+        </Text>
+      ) : (
+        <View style={styles.row}>
+          {plants.map((plant) => (
+            <View key={plant.typeKey} style={styles.pollenItem}>
+              <Text style={[styles.pollenType, isDark && styles.textMutedDark]}>
+                {t(plant.typeKey)}
+              </Text>
+              <Text style={[styles.pollenLabel, isDark && styles.textDark]}>
+                {t(plant.labelKey)}
+              </Text>
+              <PollenBar level={plant.level} isDark={isDark} />
+            </View>
+          ))}
         </View>
-        <View style={styles.pollenItem}>
-          <Text style={[styles.pollenType, isDark && styles.textMutedDark]}>
-            {t(cypress.typeKey)}
-          </Text>
-          <Text style={[styles.pollenLabel, isDark && styles.textDark]}>
-            {t(cypress.labelKey)}
-          </Text>
-          <PollenBar level={cypress.level} isDark={isDark} />
-        </View>
-      </View>
+      )}
     </View>
   )
 }
@@ -130,5 +129,11 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: 3,
+  },
+  offSeasonText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 })

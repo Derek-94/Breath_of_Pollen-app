@@ -1,6 +1,12 @@
 const ja = {
   appName: '花粉の呼吸',
 
+  tabs: {
+    today: '今日',
+    weekly: '週間',
+    settings: '設定',
+  },
+
   common: {
     loading: '天気情報を取得中...',
     error: 'データの取得に失敗しました',
@@ -18,11 +24,16 @@ const ja = {
     high: '多い',
     veryHigh: '非常に多い',
     extreme: '極めて多い',
+    offSeason: '現在は花粉シーズンではありません',
+    offSeasonShort: 'シーズン外',
   },
 
   plant: {
     cedar: 'スギ',
     cypress: 'ヒノキ',
+    pine: '松',
+    oak: 'ナラ',
+    weeds: '雑草',
   },
 
   weather: {
@@ -34,6 +45,7 @@ const ja = {
     snowy: '雪',
     showers: 'にわか雨',
     thunderstorm: '雷雨',
+    bringUmbrella: '傘をお忘れなく',
   },
 
   day: {
@@ -108,8 +120,11 @@ const ja = {
   },
 
   pm25: {
-    label: 'PM2.5',
+    label: '微細粒子',
     good: '良好',
+    moderate: '普通',
+    bad: '悪い',
+    unavailable: '-',
   },
 
   humidity: {
@@ -118,6 +133,7 @@ const ja = {
 
   weekly: {
     header: '週間予報',
+    krPollenDisclaimer: '* 韓国の花粉データは3日分のみ提供されます。',
     dayCol: '日付',
     weatherCol: '天気',
     pollenCol: '花粉',
@@ -141,14 +157,31 @@ const ja = {
     appName: '花粉の呼吸',
     version: 'バージョン',
     dataProvider: 'データ提供',
+    dataProviderKR: '韓国花粉（気象庁）',
     sourceCode: 'ソースコード',
-    footer: 'Made with ❤️ for allergy sufferers',
+    footer: '花粉症で悩む皆さんのために ❤️',
+  },
+
+  comparison: {
+    label: '昨日と比較',
+    tempColder: '{{diff}}°C 寒い',
+    tempWarmer: '{{diff}}°C 暖かい',
+    tempSimilar: '気温は昨日と同じ',
+    pollenWorse: '花粉が多め',
+    pollenBetter: '花粉が少なめ',
+    pollenSimilar: '花粉は昨日と同じ',
   },
 
   locationPicker: {
-    heading: '📍 都道府県を選択',
+    heading: '📍 地域を選択',
     subheading: '花粉・天気情報を表示する地域を選んでください',
-    warning: '⚠️ この地域では花粉データが利用できません。日本の都道府県を選択してください。',
+    warning: '⚠️ 現在地では花粉データが利用できません。地域を選択してください。',
+    japan: '🇯🇵 日本',
+    korea: '🇰🇷 韓国',
+    confirmTitle: '地域を変更',
+    confirmMessage: '{{name}}に変更しますか？',
+    confirmOk: '変更',
+    confirmCancel: 'キャンセル',
   },
 } as const
 

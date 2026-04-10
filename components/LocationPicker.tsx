@@ -1,25 +1,34 @@
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native'
+import { useState } from 'react'
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native'
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import { PREFECTURE_COORDS, REGIONS } from '@/lib/prefecture-coords'
+import { KOREA_REGIONS, KOREA_REGION_GROUPS } from '@/lib/korea-coords'
 import {
   PREFECTURE_ROMANIZED,
   PREFECTURE_HIGHLIGHT_EMOJI,
   REGIONS_ROMANIZED,
+  KOREA_ROMANIZED,
+  KOREA_KATAKANA,
+  KOREA_HIGHLIGHT_EMOJI,
+  KOREA_GROUPS_ROMANIZED,
 } from '@/lib/prefecture-i18n'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface LocationPickerProps {
   onSelect: (name: string, lat: number, lon: number) => void
+  onReset?: () => void
   pollenUnavailable?: boolean
+  currentLocationName?: string
 }
 
-export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerProps) {
+export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLocationName }: LocationPickerProps) {
   const { isDark } = useTheme()
   const posthog = usePostHog()
   const { t, i18n } = useTranslation()
 
   const isJapanese = i18n.language === 'ja'
+  const [activeTab, setActiveTab] = useState<'JP' | 'KR'>('JP')
 
   function getDisplayName(jaKey: string): string {
     if (isJapanese) return jaKey
@@ -33,6 +42,27 @@ export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerPr
 
   function getHighlightEmoji(jaKey: string): string | undefined {
     return PREFECTURE_HIGHLIGHT_EMOJI[jaKey]
+  }
+
+  function getKRDisplayName(krKey: string): string {
+    if (isJapanese) return KOREA_KATAKANA[krKey] ?? krKey
+    return KOREA_ROMANIZED[krKey] ?? krKey
+  }
+
+  function getKRGroupName(groupKey: string): string {
+    if (isJapanese) return groupKey
+    return KOREA_GROUPS_ROMANIZED[groupKey] ?? groupKey
+  }
+
+  function confirmSelect(name: string, displayName: string, lat: number, lon: number) {
+    Alert.alert(
+      t('locationPicker.confirmTitle'),
+      t('locationPicker.confirmMessage', { name: displayName }),
+      [
+        { text: t('locationPicker.confirmCancel'), style: 'cancel' },
+        { text: t('locationPicker.confirmOk'), onPress: () => onSelect(name, lat, lon) },
+      ]
+    )
   }
 
   return (
@@ -56,7 +86,47 @@ export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerPr
         {t('locationPicker.subheading')}
       </Text>
 
-      {Object.entries(REGIONS).map(([region, prefectures]) => (
+      {/* GPS 자동감지 항목 */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.gpsRow,
+          isDark && styles.gpsRowDark,
+          !currentLocationName && styles.gpsRowSelected,
+          !currentLocationName && isDark && styles.gpsRowSelectedDark,
+          pressed && styles.chipPressed,
+        ]}
+        onPress={onReset}
+        disabled={!currentLocationName}
+      >
+        <Text style={styles.gpsIcon}>📍</Text>
+        <Text style={[styles.gpsText, isDark && styles.textDark, !currentLocationName && styles.gpsTextSelected]}>
+          {t('common.autoDetect')}
+        </Text>
+        {!currentLocationName && <Text style={styles.checkmark}>✓</Text>}
+      </Pressable>
+
+      {/* 국가 탭 */}
+      <View style={[styles.tabRow, isDark && styles.tabRowDark]}>
+        <Pressable
+          style={[styles.tab, activeTab === 'JP' && styles.tabActive, activeTab === 'JP' && isDark && styles.tabActiveDark]}
+          onPress={() => setActiveTab('JP')}
+        >
+          <Text style={[styles.tabText, isDark && styles.tabTextDark, activeTab === 'JP' && styles.tabTextActive, activeTab === 'JP' && isDark && styles.tabTextActiveDark]}>
+            {t('locationPicker.japan')}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, activeTab === 'KR' && styles.tabActive, activeTab === 'KR' && isDark && styles.tabActiveDark]}
+          onPress={() => setActiveTab('KR')}
+        >
+          <Text style={[styles.tabText, isDark && styles.tabTextDark, activeTab === 'KR' && styles.tabTextActive, activeTab === 'KR' && isDark && styles.tabTextActiveDark]}>
+            {t('locationPicker.korea')}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* 일본 섹션 */}
+      {activeTab === 'JP' && Object.entries(REGIONS).map(([region, prefectures]) => (
         <View key={region} style={styles.regionBlock}>
           <Text style={[styles.regionTitle, isDark && styles.textMuted]}>
             {getRegionDisplayName(region)}
@@ -66,7 +136,7 @@ export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerPr
               const coords = PREFECTURE_COORDS[jaKey]
               const displayName = getDisplayName(jaKey)
               const emoji = !isJapanese ? getHighlightEmoji(jaKey) : undefined
-              const isHighlight = !!emoji
+              const isSelected = jaKey === currentLocationName
 
               return (
                 <Pressable
@@ -74,24 +144,60 @@ export function LocationPicker({ onSelect, pollenUnavailable }: LocationPickerPr
                   style={({ pressed }) => [
                     styles.chip,
                     isDark && styles.chipDark,
-                    isHighlight && styles.chipHighlight,
-                    isHighlight && isDark && styles.chipHighlightDark,
+                    isSelected && styles.chipSelected,
+                    isSelected && isDark && styles.chipSelectedDark,
                     pressed && styles.chipPressed,
                   ]}
                   onPress={() => {
-                    posthog.capture('location_selected', { prefecture: jaKey })
-                    // Pass romanized name as display name; coords come from Japanese key lookup
-                    onSelect(displayName, coords.lat, coords.lon)
+                    posthog.capture('location_selected', { prefecture: jaKey, country: 'JP' })
+                    confirmSelect(jaKey, displayName, coords.lat, coords.lon)
                   }}
                 >
                   {emoji && <Text style={styles.chipEmoji}>{emoji}</Text>}
-                  <Text style={[
-                    styles.chipText,
-                    isDark && styles.textDark,
-                    isHighlight && styles.chipTextHighlight,
-                  ]}>
+                  <Text style={[styles.chipText, isDark && styles.textDark, isSelected && styles.chipTextSelected]}>
                     {displayName}
                   </Text>
+                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                </Pressable>
+              )
+            })}
+          </View>
+        </View>
+      ))}
+
+      {/* 한국 섹션 */}
+      {activeTab === 'KR' && Object.entries(KOREA_REGION_GROUPS).map(([group, regions]) => (
+        <View key={group} style={styles.regionBlock}>
+          <Text style={[styles.regionTitle, isDark && styles.textMuted]}>
+            {getKRGroupName(group)}
+          </Text>
+          <View style={styles.grid}>
+            {regions.map((krKey) => {
+              const coords = KOREA_REGIONS[krKey]
+              const displayName = getKRDisplayName(krKey)
+              const emoji = KOREA_HIGHLIGHT_EMOJI[krKey]
+              const isSelected = krKey === currentLocationName
+
+              return (
+                <Pressable
+                  key={krKey}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    isDark && styles.chipDark,
+                    isSelected && styles.chipSelected,
+                    isSelected && isDark && styles.chipSelectedDark,
+                    pressed && styles.chipPressed,
+                  ]}
+                  onPress={() => {
+                    posthog.capture('location_selected', { region: krKey, country: 'KR' })
+                    confirmSelect(krKey, displayName, coords.lat, coords.lon)
+                  }}
+                >
+                  {emoji && <Text style={styles.chipEmoji}>{emoji}</Text>}
+                  <Text style={[styles.chipText, isDark && styles.textDark, isSelected && styles.chipTextSelected]}>
+                    {displayName}
+                  </Text>
+                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
                 </Pressable>
               )
             })}
@@ -163,15 +269,24 @@ const styles = StyleSheet.create({
   chipDark: {
     backgroundColor: '#2a2a2a',
   },
-  chipHighlight: {
+  chipSelected: {
     backgroundColor: '#fff0eb',
-    borderWidth: 1,
-    borderColor: '#fb923c40',
+    borderWidth: 1.5,
+    borderColor: '#f87171',
   },
-  chipHighlightDark: {
-    backgroundColor: '#2a1f18',
-    borderWidth: 1,
-    borderColor: '#fb923c40',
+  chipSelectedDark: {
+    backgroundColor: '#2a1a1a',
+    borderWidth: 1.5,
+    borderColor: '#fb923c',
+  },
+  chipTextSelected: {
+    color: '#f87171',
+    fontWeight: '600',
+  },
+  checkmark: {
+    fontSize: 12,
+    color: '#f87171',
+    fontWeight: '700',
   },
   chipPressed: {
     opacity: 0.7,
@@ -184,7 +299,82 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
-  chipTextHighlight: {
+  gpsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  gpsRowDark: {
+    backgroundColor: '#2a2a2a',
+  },
+  gpsRowSelected: {
+    backgroundColor: '#fff0eb',
+    borderWidth: 1.5,
+    borderColor: '#f87171',
+  },
+  gpsRowSelectedDark: {
+    backgroundColor: '#2a1a1a',
+    borderWidth: 1.5,
+    borderColor: '#fb923c',
+  },
+  gpsIcon: {
+    fontSize: 14,
+  },
+  gpsText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  gpsTextSelected: {
+    color: '#f87171',
     fontWeight: '600',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+    gap: 4,
+  },
+  tabRowDark: {
+    backgroundColor: '#222',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 9,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabActiveDark: {
+    backgroundColor: '#333',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#999',
+  },
+  tabTextDark: {
+    color: '#666',
+  },
+  tabTextActive: {
+    color: '#111',
+    fontWeight: '600',
+  },
+  tabTextActiveDark: {
+    color: '#eee',
   },
 })

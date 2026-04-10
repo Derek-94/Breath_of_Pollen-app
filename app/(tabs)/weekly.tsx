@@ -14,8 +14,16 @@ import { useLocationContext } from '@/contexts/LocationContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useWeatherData } from '@/hooks/useWeatherData'
 import { getPollenColor, POLLEN_LABEL_KEYS, type PollenLevel } from '@/lib/weather-utils'
+import { localizeLocationName } from '@/lib/prefecture-i18n'
 
-function PollenDot({ level }: { level: PollenLevel }) {
+function PollenDot({ level, offSeason }: { level: PollenLevel; offSeason?: boolean }) {
+  if (offSeason) {
+    return (
+      <View style={[styles.pollenDot, { backgroundColor: '#ccc' }]}>
+        <Text style={styles.pollenDotText}>—</Text>
+      </View>
+    )
+  }
   return (
     <View style={[styles.pollenDot, { backgroundColor: getPollenColor(level) }]}>
       <Text style={styles.pollenDotText}>{level}</Text>
@@ -52,7 +60,7 @@ function TempBar({ low, high, dayLow, dayHigh, isDark }: {
 
 export default function WeeklyScreen() {
   const { isDark } = useTheme()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { location, loading: locationLoading } = useLocationContext()
   const { data, loading: dataLoading, error, refetch } = useWeatherData(
     location?.lat ?? null,
@@ -72,6 +80,9 @@ export default function WeeklyScreen() {
     return (
       <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <ActivityIndicator size="large" color={isDark ? '#fb923c' : '#f87171'} />
+        <Text style={[styles.loadingText, isDark && styles.textMuted]}>
+          {t('common.loading')}
+        </Text>
       </SafeAreaView>
     )
   }
@@ -89,6 +100,8 @@ export default function WeeklyScreen() {
     )
   }
 
+  const isOffSeason = data.country === 'KR' && data.pollenPlants.length === 0
+
   const forecast = data.weeklyForecast
   const allLows = forecast.map((d) => d.low)
   const allHighs = forecast.map((d) => d.high)
@@ -105,23 +118,32 @@ export default function WeeklyScreen() {
       >
         <Text style={[styles.header, isDark && styles.textDark]}>{t('weekly.header')}</Text>
         <Text style={[styles.locationText, isDark && styles.textMuted]}>
-          📍 {data.location}
+          📍 {localizeLocationName(data.location, i18n.language)}
         </Text>
 
-        {/* Pollen legend */}
-        <View style={[styles.card, isDark && styles.cardDark]}>
-          <Text style={[styles.legendTitle, isDark && styles.textDark]}>{t('weekly.pollenLegend')}</Text>
-          <View style={styles.legendRow}>
-            {([1, 2, 3, 4, 5] as PollenLevel[]).map((level) => (
-              <View key={level} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: getPollenColor(level) }]} />
-                <Text style={[styles.legendText, isDark && styles.textMuted]}>
-                  {t(POLLEN_LABEL_KEYS[level])}
-                </Text>
-              </View>
-            ))}
+        {/* Pollen legend / off-season notice */}
+        {isOffSeason ? (
+          <View style={[styles.card, isDark && styles.cardDark, styles.offSeasonCard]}>
+            <Text style={styles.offSeasonEmoji}>🌿</Text>
+            <Text style={[styles.offSeasonText, isDark && styles.textMuted]}>
+              {t('pollen.offSeason')}
+            </Text>
           </View>
-        </View>
+        ) : (
+          <View style={[styles.card, isDark && styles.cardDark]}>
+            <Text style={[styles.legendTitle, isDark && styles.textDark]}>{t('weekly.pollenLegend')}</Text>
+            <View style={styles.legendRow}>
+              {([1, 2, 3, 4, 5] as PollenLevel[]).map((level) => (
+                <View key={level} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: getPollenColor(level) }]} />
+                  <Text style={[styles.legendText, isDark && styles.textMuted]}>
+                    {t(POLLEN_LABEL_KEYS[level])}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         <View style={[styles.card, isDark && styles.cardDark]}>
           {/* Column headers */}
@@ -156,7 +178,7 @@ export default function WeeklyScreen() {
 
                 <Text style={styles.weatherIcon}>{day.icon}</Text>
 
-                <PollenDot level={day.pollenLevel} />
+                <PollenDot level={day.pollenLevel} offSeason={isOffSeason || day.pollenUnknown} />
 
                 <TempBar
                   low={day.low}
@@ -169,6 +191,12 @@ export default function WeeklyScreen() {
             </View>
           ))}
         </View>
+
+        {data.country === 'KR' && !isOffSeason && (
+          <Text style={[styles.disclaimer, isDark && styles.textMuted]}>
+            {t('weekly.krPollenDisclaimer')}
+          </Text>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -318,6 +346,19 @@ const styles = StyleSheet.create({
   dividerDark: {
     backgroundColor: '#333',
   },
+  offSeasonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  offSeasonEmoji: {
+    fontSize: 20,
+  },
+  offSeasonText: {
+    fontSize: 13,
+    color: '#999',
+    flex: 1,
+  },
   legendTitle: {
     fontSize: 13,
     fontWeight: '600',
@@ -346,6 +387,18 @@ const styles = StyleSheet.create({
   },
   textMuted: {
     color: '#999',
+  },
+  disclaimer: {
+    fontSize: 12,
+    color: '#aaa',
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 8,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
   errorText: {
     fontSize: 14,

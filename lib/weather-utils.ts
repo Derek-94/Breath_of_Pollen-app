@@ -50,6 +50,33 @@ export function mapPollenIndex(value: number | undefined | null): PollenLevel {
   return 5
 }
 
+// 기상청 꽃가루 등급 (0~3) → our 1–5 scale
+// 0=낮음 → 1, 1=보통 → 2, 2=높음 → 3, 3=매우높음 → 4 (한국은 5=극히많음 미사용)
+export function mapKMAGrade(value: number | string | undefined | null): PollenLevel {
+  if (value === '' || value == null) return 1
+  const n = typeof value === 'string' ? parseInt(value) : value
+  if (isNaN(n as number)) return 1
+  if (n === 0) return 1
+  if (n === 1) return 2
+  if (n === 2) return 3
+  return 4
+}
+
+/** 일별 weathercode 기준 우산 필요 여부 (비/눈/소나기/뇌우) */
+export function needsUmbrellaToday(dailyCode: number): boolean {
+  const type = getWeatherInfo(dailyCode).type
+  return type === 'rainy' || type === 'snowy'
+}
+
+/** 좌표로 국가 판별 */
+export function detectCountry(lat: number, lon: number): 'JP' | 'KR' | 'OTHER' {
+  // 한국: 33~39N, 124~132E (일본 쓰시마 포함되나 실용상 무관)
+  if (lat >= 33 && lat <= 39 && lon >= 124 && lon <= 132) return 'KR'
+  // 일본: 24~46N, 122~154E
+  if (lat >= 24 && lat <= 46 && lon >= 122 && lon <= 154) return 'JP'
+  return 'OTHER'
+}
+
 // Outfit recommendation based on temperature + pollen — returns i18n keys
 export function getOutfitRecommendation(
   temp: number,
@@ -151,6 +178,13 @@ export function getDayIndex(dateStr: string): number {
 export function formatDate(dateStr: string): string {
   const [, m, d] = dateStr.split('-').map(Number)
   return `${m}/${d}`
+}
+
+export function getPM25Label(value: number | null): { valueKey: string; level: 'low' | 'medium' | 'high' } {
+  if (value == null) return { valueKey: 'pm25.unavailable', level: 'low' }
+  if (value <= 15) return { valueKey: 'pm25.good', level: 'low' }
+  if (value <= 35) return { valueKey: 'pm25.moderate', level: 'medium' }
+  return { valueKey: 'pm25.bad', level: 'high' }
 }
 
 export function getPollenColor(level: PollenLevel): string {

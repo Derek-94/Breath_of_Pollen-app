@@ -21,6 +21,7 @@ import {
   SUPPORTED_LANGUAGES,
   type SupportedLanguage,
 } from '@/lib/i18n'
+import { localizeLocationName } from '@/lib/prefecture-i18n'
 
 const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
   { value: 'system', labelKey: 'settings.themeSystem' },
@@ -68,7 +69,7 @@ export default function SettingsScreen() {
             <Text style={[styles.backText, isDark && styles.tintDark]}>{t('common.back')}</Text>
           </Pressable>
         </View>
-        <LocationPicker onSelect={handlePrefectureSelect} />
+        <LocationPicker onSelect={handlePrefectureSelect} onReset={handleResetLocation} currentLocationName={location?.name} />
       </SafeAreaView>
     )
   }
@@ -85,7 +86,7 @@ export default function SettingsScreen() {
           <View style={styles.row}>
             <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.currentLocation')}</Text>
             <Text style={[styles.value, isDark && styles.textDark]}>
-              {location?.name ?? t('common.autoDetect')}
+              {location?.name ? localizeLocationName(location.name, i18n.language) : t('common.autoDetect')}
             </Text>
           </View>
 
@@ -183,6 +184,14 @@ export default function SettingsScreen() {
             <Text style={[styles.value, isDark && styles.textDark]}>
               Open-Meteo / Google Pollen
             </Text>
+          </View>
+          <View style={[styles.divider, isDark && styles.dividerDark]} />
+
+          <View style={styles.row}>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.dataProviderKR')}</Text>
+            <Pressable onPress={() => Linking.openURL('https://www.data.go.kr/data/15085289/openapi.do')}>
+              <Text style={[styles.linkText, isDark && styles.tintDark]}>data.go.kr →</Text>
+            </Pressable>
           </View>
           <View style={[styles.divider, isDark && styles.dividerDark]} />
 

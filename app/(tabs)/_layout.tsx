@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router'
 import { Platform } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const TINT_LIGHT = '#f87171'
@@ -12,6 +13,7 @@ function TabIcon({ name, color }: { name: React.ComponentProps<typeof FontAwesom
 
 export default function TabLayout() {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
   const tint = isDark ? TINT_DARK : TINT_LIGHT
 
   return (
@@ -31,21 +33,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '今日',
+          title: t('tabs.today'),
           tabBarIcon: ({ color }) => <TabIcon name="sun-o" color={color} />,
         }}
       />
       <Tabs.Screen
         name="weekly"
         options={{
-          title: '週間',
+          title: t('tabs.weekly'),
           tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: '設定',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color }) => <TabIcon name="gear" color={color} />,
         }}
       />
