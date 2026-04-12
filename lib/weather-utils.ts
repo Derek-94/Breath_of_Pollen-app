@@ -159,8 +159,15 @@ export function getOutfitRecommendation(
   return { items: baseItems, summary }
 }
 
-export function isLaundryOk(pollenLevel: PollenLevel, weatherCode: number): boolean {
-  return pollenLevel <= 2 && weatherCode < 51
+export type LaundryStatus = 'ok' | 'pollen' | 'rain' | 'both'
+
+export function getLaundryStatus(pollenLevel: PollenLevel, weatherCode: number): LaundryStatus {
+  const badPollen = pollenLevel > 2
+  const badWeather = weatherCode >= 51
+  if (badPollen && badWeather) return 'both'
+  if (badPollen) return 'pollen'
+  if (badWeather) return 'rain'
+  return 'ok'
 }
 
 export function getUVLabel(uvIndex: number): { valueKey: string; level: 'low' | 'medium' | 'high' } {

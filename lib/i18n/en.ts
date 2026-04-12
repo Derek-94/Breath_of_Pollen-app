@@ -110,6 +110,8 @@ const en = {
     label: 'Laundry: {{status}}',
     okDesc: 'Low pollen & clear skies – safe to hang outside',
     indoorDesc: 'High pollen – drying indoors recommended',
+    rainDesc: 'Rain or snow expected – dry indoors to avoid soaking',
+    bothDesc: 'High pollen + rain – indoor drying essential',
   },
 
   uv: {

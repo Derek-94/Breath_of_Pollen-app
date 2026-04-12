@@ -13,7 +13,7 @@ import {
 } from 'react-native'
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type OutfitItem, type PollenLevel, POLLEN_LABEL_KEYS, getPollenColor } from '@/lib/weather-utils'
+import { type OutfitItem, type PollenLevel, type LaundryStatus, POLLEN_LABEL_KEYS, getPollenColor } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -25,11 +25,11 @@ interface OutfitDetailProps {
   temperature: { high: number; low: number }
   pollenLevel: PollenLevel
   isOffSeason?: boolean
-  laundryOk: boolean
+  laundryStatus: LaundryStatus
   onClose: () => void
 }
 
-export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, laundryOk, onClose }: OutfitDetailProps) {
+export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, laundryStatus, onClose }: OutfitDetailProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
   const backdropOpacity = useRef(new Animated.Value(0)).current
@@ -51,20 +51,26 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
     ]).start()
   }, [])
 
+  const dismissRef = useRef<() => void>(null as unknown as () => void)
+
   const dismiss = () => {
+    sheetTranslateY.stopAnimation()
+    backdropOpacity.stopAnimation()
     Animated.parallel([
       Animated.timing(backdropOpacity, {
         toValue: 0,
-        duration: 200,
+        duration: 250,
         useNativeDriver: true,
       }),
       Animated.timing(sheetTranslateY, {
         toValue: SHEET_MAX,
-        duration: 250,
+        duration: 300,
         useNativeDriver: true,
       }),
     ]).start(() => onClose())
   }
+
+  dismissRef.current = dismiss
 
   const panResponder = useRef(
     PanResponder.create({
@@ -78,13 +84,14 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
       },
       onPanResponderRelease: (_e: GestureResponderEvent, gs: PanResponderGestureState) => {
         if (gs.dy > DISMISS_THRESHOLD || gs.vy > 0.5) {
-          dismiss()
+          dismissRef.current()
         } else {
           Animated.parallel([
             Animated.spring(sheetTranslateY, {
               toValue: 0,
-              damping: 25,
-              stiffness: 200,
+              damping: 40,
+              stiffness: 300,
+              overshootClamping: true,
               useNativeDriver: true,
             }),
             Animated.timing(backdropOpacity, {
@@ -154,13 +161,18 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
             ))}
 
             <View style={[styles.laundryCard, isDark && styles.laundryCardDark]}>
-              <Text style={styles.laundryIcon}>{laundryOk ? '👕' : '🏠'}</Text>
+              <Text style={styles.laundryIcon}>{laundryStatus === 'ok' ? '👕' : '🏠'}</Text>
               <View>
                 <Text style={[styles.laundryTitle, isDark && styles.textDark]}>
-                  {t('laundry.label', { status: t(laundryOk ? 'laundry.ok' : 'laundry.indoor') })}
+                  {t('laundry.label', { status: t(laundryStatus === 'ok' ? 'laundry.ok' : 'laundry.indoor') })}
                 </Text>
                 <Text style={[styles.laundryDesc, isDark && styles.textMuted]}>
-                  {t(laundryOk ? 'laundry.okDesc' : 'laundry.indoorDesc')}
+                  {t(
+                    laundryStatus === 'ok' ? 'laundry.okDesc' :
+                    laundryStatus === 'pollen' ? 'laundry.indoorDesc' :
+                    laundryStatus === 'rain' ? 'laundry.rainDesc' :
+                    'laundry.bothDesc'
+                  )}
                 </Text>
               </View>
             </View>

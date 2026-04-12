@@ -110,6 +110,8 @@ const ja = {
     label: '洗濯物: {{status}}',
     okDesc: '花粉少なめ＆晴れ予報で安心',
     indoorDesc: '花粉が多いため室内干しがおすすめ',
+    rainDesc: '雨／雪の予報があるため室内干しがおすすめ',
+    bothDesc: '花粉も多く雨の予報もあり、室内干し必須',
   },
 
   uv: {

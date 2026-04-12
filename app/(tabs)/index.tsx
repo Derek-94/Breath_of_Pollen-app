@@ -20,7 +20,7 @@ import { InfoCard } from '@/components/InfoCard'
 import { HourlyChart } from '@/components/HourlyChart'
 import { OutfitDetail } from '@/components/OutfitDetail'
 import { LocationPicker } from '@/components/LocationPicker'
-import { getUVLabel, getPM25Label, isLaundryOk } from '@/lib/weather-utils'
+import { getUVLabel, getPM25Label, getLaundryStatus } from '@/lib/weather-utils'
 import { localizeLocationName } from '@/lib/prefecture-i18n'
 
 function Logo() {
@@ -34,7 +34,6 @@ function Logo() {
           <View key={color} style={[styles.dot, { backgroundColor: color }]} />
         ))}
       </View>
-      <Text style={[styles.logoText, isDark && styles.textDark]}>花粉の呼吸</Text>
     </View>
   )
 }
@@ -254,7 +253,7 @@ export default function TodayScreen() {
           temperature={{ high: data.high, low: data.low }}
           pollenLevel={data.pollenOverall}
           isOffSeason={data.country === 'KR' && data.pollenPlants.length === 0}
-          laundryOk={isLaundryOk(data.pollenOverall, data.weatherCode)}
+          laundryStatus={getLaundryStatus(data.pollenOverall, data.weatherCode)}
           onClose={() => setShowOutfitDetail(false)}
         />
       )}

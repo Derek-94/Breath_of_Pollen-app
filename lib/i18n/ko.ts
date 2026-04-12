@@ -106,10 +106,12 @@ const ko = {
 
   laundry: {
     ok: '야외 건조 OK',
-    indoor: '실내 건조 권장',
+    indoor: '실내 건조 권장!',
     label: '빨래: {{status}}',
-    okDesc: '꽃가루 적고 맑은 예보로 안심',
-    indoorDesc: '꽃가루가 많아 실내 건조를 권장합니다',
+    okDesc: '꽃가루 적고 맑은 예보로 안심하세요!',
+    indoorDesc: '꽃가루가 많아 실내 건조를 권장합니다.',
+    rainDesc: '비/눈 예보가 있어 빨래가 젖을 수 있어요. 실내 건조를 권장합니다.',
+    bothDesc: '꽃가루도 많고 비도 와요. 실내 건조 필수!',
   },
 
   uv: {
