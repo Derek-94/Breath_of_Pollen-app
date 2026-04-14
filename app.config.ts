@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.breathofpollen.app',
+    bundleIdentifier: 'com.pollenbreathing.app',
     infoPlist: {
       NSLocationWhenInUseUsageDescription: '現在地の天気・花粉情報を取得するために位置情報を使用します。',
     },
@@ -27,9 +27,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
-    package: 'com.breathofpollen.app',
+    package: 'com.pollenbreathing.app',
   },
   plugins: [
+    './plugins/withLocalizedAppName',
     'expo-router',
     'expo-localization',
     [

@@ -1,5 +1,5 @@
 const en = {
-  appName: 'Breath of Pollen',
+  appName: 'Pollen Breathing',
 
   tabs: {
     today: 'Today',
@@ -156,7 +156,7 @@ const en = {
     themeDark: 'Dark',
     language: 'Language',
     appInfo: 'App Info',
-    appName: 'Breath of Pollen',
+    appName: 'Pollen Breathing',
     version: 'Version',
     dataProvider: 'Data',
     dataProviderKR: 'Korea Pollen (KMA)',
