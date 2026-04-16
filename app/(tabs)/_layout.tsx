@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router'
 import { Platform } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -15,6 +16,8 @@ export default function TabLayout() {
   const { isDark } = useTheme()
   const { t } = useTranslation()
   const tint = isDark ? TINT_DARK : TINT_LIGHT
+  const insets = useSafeAreaInsets()
+  const androidBottomPadding = Platform.OS === 'android' ? insets.bottom + 8 : 0
 
   return (
     <Tabs
@@ -24,8 +27,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: isDark ? '#1a1a1a' : '#fff',
           borderTopColor: isDark ? '#333' : '#eee',
-          paddingBottom: Platform.OS === 'ios' ? 16 : 8,
-          height: Platform.OS === 'ios' ? 68 : 56,
+          paddingBottom: Platform.OS === 'ios' ? 16 : androidBottomPadding,
+          height: Platform.OS === 'ios' ? 68 : 56 + insets.bottom,
         },
         headerShown: false,
       }}
