@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { PostHogProvider } from 'posthog-react-native'
 import { LocationProvider } from '@/contexts/LocationContext'
+import { WeatherDataProvider } from '@/contexts/WeatherDataContext'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 import '@/lib/i18n'
 import { initLanguage } from '@/lib/i18n'
@@ -43,7 +44,9 @@ export default function RootLayout() {
     >
       <ThemeProvider>
         <LocationProvider>
-          <InnerLayout />
+          <WeatherDataProvider>
+            <InnerLayout />
+          </WeatherDataProvider>
         </LocationProvider>
       </ThemeProvider>
     </PostHogProvider>

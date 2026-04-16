@@ -133,13 +133,47 @@ const en = {
     label: 'Humidity',
   },
 
+  infoDetail: {
+    uv: {
+      title: 'UV Index',
+      low: { desc: 'Low UV. No special protection needed.', tip: 'Safe to be outside without protection.' },
+      medium: { desc: 'Moderate UV. Some protection recommended.', tip: 'Apply SPF 30+ sunscreen and wear a hat.' },
+      high: { desc: 'High UV. Protection essential.', tip: 'Wear SPF 50+, sunglasses, and avoid midday sun.' },
+    },
+    pm25: {
+      title: 'Fine Dust (PM2.5)',
+      low: { desc: 'Air quality is good.', tip: 'Great conditions for outdoor activities.' },
+      medium: { desc: 'Acceptable air quality.', tip: 'Sensitive groups (asthma, allergies) may want to limit prolonged outdoor time.' },
+      high: { desc: 'Poor air quality.', tip: 'Wear a mask outdoors. Avoid strenuous exercise outside.' },
+    },
+    humidity: {
+      title: 'Humidity',
+      low: { desc: 'Dry air conditions.', tip: 'Pollen spreads more easily. Stay hydrated and moisturize.' },
+      medium: { desc: 'Comfortable humidity.', tip: 'Moderate humidity helps keep pollen levels lower.' },
+      high: { desc: 'High humidity.', tip: 'Pollen tends to stay grounded. Watch out for mold spores instead.' },
+    },
+  },
+
+  pollenDetail: {
+    title: '🌿 Pollen Detail',
+    todaySection: "Today's Pollen",
+    weeklySection: 'This Week',
+    tip: {
+      1: 'Pollen count is low. No special precautions needed.',
+      2: 'Pollen is slightly elevated. Keep a mask handy if you have allergies.',
+      3: 'Pollen count is high. Wear a mask when going outside.',
+      4: 'Pollen count is very high. Wear a mask and protective eyewear, and wash your face after returning home.',
+      5: 'Pollen count is extreme. Minimize outings and keep windows closed.',
+    },
+  },
+
   weekly: {
     header: 'Weekly Forecast',
     krPollenDisclaimer: '* Pollen data is only available for 3 days in Korea.',
     dayCol: 'Date',
     weatherCol: 'Sky',
     pollenCol: '🌿',
-    tempRange: '── Weekly Temp ──',
+    tempRange: 'Weekly Temp',
     pollenLegend: 'Pollen Level',
     dayFormat: '{{day}}',
   },

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { type PollenLevel, getPollenColor, POLLEN_LABEL_KEYS } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 interface PollenCardProps {
   plants: { typeKey: string; level: PollenLevel; labelKey: string }[]
   overallLevel: PollenLevel
+  onPress?: () => void
 }
 
 function PollenBar({ level, isDark }: { level: PollenLevel; isDark: boolean }) {
@@ -24,20 +25,26 @@ function PollenBar({ level, isDark }: { level: PollenLevel; isDark: boolean }) {
   )
 }
 
-export function PollenCard({ plants, overallLevel }: PollenCardProps) {
+export function PollenCard({ plants, overallLevel, onPress }: PollenCardProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
   return (
-    <View style={[styles.card, isDark && styles.cardDark]}>
+    <Pressable
+      style={({ pressed }) => [styles.card, isDark && styles.cardDark, pressed && styles.pressed]}
+      onPress={onPress}
+    >
       <View style={styles.header}>
         <Text style={[styles.title, isDark && styles.textDark]}>{t('pollen.title')}</Text>
-        {plants.length > 0 && (
-          <View style={[styles.badge, { backgroundColor: getPollenColor(overallLevel) + '20' }]}>
-            <Text style={[styles.badgeText, { color: getPollenColor(overallLevel) }]}>
-              {t(POLLEN_LABEL_KEYS[overallLevel])}
-            </Text>
-          </View>
-        )}
+        <View style={styles.headerRight}>
+          {plants.length > 0 && (
+            <View style={[styles.badge, { backgroundColor: getPollenColor(overallLevel) + '20' }]}>
+              <Text style={[styles.badgeText, { color: getPollenColor(overallLevel) }]}>
+                {t(POLLEN_LABEL_KEYS[overallLevel])}
+              </Text>
+            </View>
+          )}
+          <Text style={[styles.infoIcon, isDark && styles.infoIconDark]}>ⓘ</Text>
+        </View>
       </View>
 
       {plants.length === 0 ? (
@@ -59,7 +66,7 @@ export function PollenCard({ plants, overallLevel }: PollenCardProps) {
           ))}
         </View>
       )}
-    </View>
+    </Pressable>
   )
 }
 
@@ -77,11 +84,26 @@ const styles = StyleSheet.create({
   cardDark: {
     backgroundColor: '#1e1e1e',
   },
+  pressed: {
+    opacity: 0.75,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoIcon: {
+    fontSize: 15,
+    color: '#bbb',
+  },
+  infoIconDark: {
+    color: '#555',
   },
   title: {
     fontSize: 16,

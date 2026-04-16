@@ -13,12 +13,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocationContext } from '@/contexts/LocationContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useWeatherData } from '@/hooks/useWeatherData'
+import { useWeatherDataContext } from '@/contexts/WeatherDataContext'
 import { PollenCard } from '@/components/PollenCard'
 import { OutfitCard } from '@/components/OutfitCard'
 import { InfoCard } from '@/components/InfoCard'
 import { HourlyChart } from '@/components/HourlyChart'
 import { OutfitDetail } from '@/components/OutfitDetail'
+import { InfoCardDetail } from '@/components/InfoCardDetail'
+import { PollenDetail } from '@/components/PollenDetail'
 import { LocationPicker } from '@/components/LocationPicker'
 import { getUVLabel, getPM25Label, getLaundryStatus } from '@/lib/weather-utils'
 import { localizeLocationName } from '@/lib/prefecture-i18n'
@@ -43,13 +45,11 @@ export default function TodayScreen() {
   const posthog = usePostHog()
   const { t, i18n } = useTranslation()
   const { location, loading: locationLoading, error: locationError, setManualLocation, clearSavedLocation } = useLocationContext()
-  const { data, loading: dataLoading, error: dataError, pollenUnavailable, refetch } = useWeatherData(
-    location?.lat ?? null,
-    location?.lon ?? null,
-    location?.name,
-  )
+  const { data, loading: dataLoading, error: dataError, pollenUnavailable, refetch } = useWeatherDataContext()
 
   const [showOutfitDetail, setShowOutfitDetail] = useState(false)
+  const [showPollenDetail, setShowPollenDetail] = useState(false)
+  const [activeInfoCard, setActiveInfoCard] = useState<'uv' | 'pm25' | 'humidity' | null>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -221,6 +221,7 @@ export default function TodayScreen() {
           <PollenCard
             plants={data.pollenPlants}
             overallLevel={data.pollenOverall}
+            onPress={() => setShowPollenDetail(true)}
           />
 
           <OutfitCard
@@ -233,19 +234,59 @@ export default function TodayScreen() {
           />
 
           <View style={styles.infoRow}>
-            <InfoCard type="uv" value={t(uvLabel.valueKey)} label={t('uv.label')} level={uvLabel.level} />
-            <InfoCard type="pm25" value={t(pm25Label.valueKey)} label={t('pm25.label')} level={pm25Label.level} />
+            <InfoCard
+              type="uv"
+              value={t(uvLabel.valueKey)}
+              label={t('uv.label')}
+              level={uvLabel.level}
+              onPress={() => setActiveInfoCard('uv')}
+            />
+            <InfoCard
+              type="pm25"
+              value={t(pm25Label.valueKey)}
+              label={t('pm25.label')}
+              level={pm25Label.level}
+              onPress={() => setActiveInfoCard('pm25')}
+            />
             <InfoCard
               type="humidity"
               value={`${data.humidity}%`}
               label={t('humidity.label')}
               level={data.humidity > 70 ? 'high' : data.humidity > 40 ? 'medium' : 'low'}
+              onPress={() => setActiveInfoCard('humidity')}
             />
           </View>
 
           <HourlyChart data={data.hourlyData} />
         </View>
       </ScrollView>
+
+      {activeInfoCard && (
+        <InfoCardDetail
+          type={activeInfoCard}
+          level={
+            activeInfoCard === 'uv' ? uvLabel.level :
+            activeInfoCard === 'pm25' ? pm25Label.level :
+            data.humidity > 70 ? 'high' : data.humidity > 40 ? 'medium' : 'low'
+          }
+          numericValue={
+            activeInfoCard === 'uv' ? data.uvIndex :
+            activeInfoCard === 'pm25' ? data.pm2_5 :
+            data.humidity
+          }
+          onClose={() => setActiveInfoCard(null)}
+        />
+      )}
+
+      {showPollenDetail && (
+        <PollenDetail
+          plants={data.pollenPlants}
+          overallLevel={data.pollenOverall}
+          weeklyForecast={data.weeklyForecast}
+          country={data.country}
+          onClose={() => setShowPollenDetail(false)}
+        />
+      )}
 
       {showOutfitDetail && (
         <OutfitDetail

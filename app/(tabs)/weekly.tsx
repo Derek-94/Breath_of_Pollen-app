@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocationContext } from '@/contexts/LocationContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useWeatherData } from '@/hooks/useWeatherData'
+import { useWeatherDataContext } from '@/contexts/WeatherDataContext'
 import { getPollenColor, POLLEN_LABEL_KEYS, type PollenLevel } from '@/lib/weather-utils'
 import { localizeLocationName } from '@/lib/prefecture-i18n'
 
@@ -62,11 +62,7 @@ export default function WeeklyScreen() {
   const { isDark } = useTheme()
   const { t, i18n } = useTranslation()
   const { location, loading: locationLoading } = useLocationContext()
-  const { data, loading: dataLoading, error, refetch } = useWeatherData(
-    location?.lat ?? null,
-    location?.lon ?? null,
-    location?.name,
-  )
+  const { data, loading: dataLoading, error, refetch } = useWeatherDataContext()
 
   const [refreshing, setRefreshing] = useState(false)
 

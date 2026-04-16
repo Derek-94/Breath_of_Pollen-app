@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface InfoCardProps {
@@ -6,6 +6,7 @@ interface InfoCardProps {
   value: string
   label: string
   level: 'low' | 'medium' | 'high'
+  onPress?: () => void
 }
 
 const ICONS: Record<string, string> = {
@@ -20,15 +21,19 @@ const LEVEL_COLORS: Record<string, string> = {
   high: '#f87171',
 }
 
-export function InfoCard({ type, value, label, level }: InfoCardProps) {
+export function InfoCard({ type, value, label, level, onPress }: InfoCardProps) {
   const { isDark } = useTheme()
 
   return (
-    <View style={[styles.card, isDark && styles.cardDark]}>
+    <Pressable
+      style={({ pressed }) => [styles.card, isDark && styles.cardDark, pressed && styles.pressed]}
+      onPress={onPress}
+    >
+      <Text style={[styles.infoIcon, isDark && styles.infoIconDark]}>ⓘ</Text>
       <Text style={styles.icon}>{ICONS[type]}</Text>
       <Text style={[styles.value, { color: LEVEL_COLORS[level] }]}>{value}</Text>
       <Text style={[styles.label, isDark && styles.labelDark]}>{label}</Text>
-    </View>
+    </Pressable>
   )
 }
 
@@ -63,5 +68,18 @@ const styles = StyleSheet.create({
   },
   labelDark: {
     color: '#777',
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  infoIcon: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    fontSize: 12,
+    color: '#ccc',
+  },
+  infoIconDark: {
+    color: '#555',
   },
 })
