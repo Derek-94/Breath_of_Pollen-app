@@ -55,9 +55,10 @@ export default function TodayScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
+    posthog.capture('refresh_triggered', { tab: 'today' })
     await refetch()
     setRefreshing(false)
-  }, [refetch])
+  }, [refetch, posthog])
 
   const handlePrefectureSelect = useCallback(
     (name: string, lat: number, lon: number) => {
@@ -221,7 +222,10 @@ export default function TodayScreen() {
           <PollenCard
             plants={data.pollenPlants}
             overallLevel={data.pollenOverall}
-            onPress={() => setShowPollenDetail(true)}
+            onPress={() => {
+              posthog.capture('pollen_detail_opened', { pollen_level: data.pollenOverall })
+              setShowPollenDetail(true)
+            }}
           />
 
           <OutfitCard
@@ -239,21 +243,30 @@ export default function TodayScreen() {
               value={t(uvLabel.valueKey)}
               label={t('uv.label')}
               level={uvLabel.level}
-              onPress={() => setActiveInfoCard('uv')}
+              onPress={() => {
+                posthog.capture('info_card_opened', { type: 'uv' })
+                setActiveInfoCard('uv')
+              }}
             />
             <InfoCard
               type="pm25"
               value={t(pm25Label.valueKey)}
               label={t('pm25.label')}
               level={pm25Label.level}
-              onPress={() => setActiveInfoCard('pm25')}
+              onPress={() => {
+                posthog.capture('info_card_opened', { type: 'pm25' })
+                setActiveInfoCard('pm25')
+              }}
             />
             <InfoCard
               type="humidity"
               value={`${data.humidity}%`}
               label={t('humidity.label')}
               level={data.humidity > 70 ? 'high' : data.humidity > 40 ? 'medium' : 'low'}
-              onPress={() => setActiveInfoCard('humidity')}
+              onPress={() => {
+                posthog.capture('info_card_opened', { type: 'humidity' })
+                setActiveInfoCard('humidity')
+              }}
             />
           </View>
 

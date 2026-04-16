@@ -231,6 +231,7 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         pollenUnknown: krPollenDays !== undefined && i >= krPollenDays,
       }))
 
+      posthog.register({ location: resolvedLocation, country })
       setData({
         location: resolvedLocation,
         country,

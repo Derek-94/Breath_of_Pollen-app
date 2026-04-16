@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import {
   View,
@@ -60,17 +61,23 @@ function TempBar({ low, high, dayLow, dayHigh, isDark }: {
 
 export default function WeeklyScreen() {
   const { isDark } = useTheme()
+  const posthog = usePostHog()
   const { t, i18n } = useTranslation()
   const { location, loading: locationLoading } = useLocationContext()
   const { data, loading: dataLoading, error, refetch } = useWeatherDataContext()
 
   const [refreshing, setRefreshing] = useState(false)
 
+  useEffect(() => {
+    posthog.capture('weekly_tab_viewed')
+  }, [])
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
+    posthog.capture('refresh_triggered', { tab: 'weekly' })
     await refetch()
     setRefreshing(false)
-  }, [refetch])
+  }, [refetch, posthog])
 
   if (locationLoading || dataLoading) {
     return (
