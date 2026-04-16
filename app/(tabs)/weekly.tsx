@@ -81,7 +81,7 @@ export default function WeeklyScreen() {
 
   if (locationLoading || dataLoading) {
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
+      <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <ActivityIndicator size="large" color={isDark ? '#fb923c' : '#f87171'} />
         <Text style={[styles.loadingText, isDark && styles.textMuted]}>
           {t('common.loading')}
@@ -92,7 +92,7 @@ export default function WeeklyScreen() {
 
   if (error || !data) {
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
+      <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <Text style={[styles.errorText, isDark && styles.textDark]}>
           {error ?? t('common.error')}
         </Text>
@@ -112,7 +112,7 @@ export default function WeeklyScreen() {
   const weekHigh = Math.max(...allHighs)
 
   return (
-    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={

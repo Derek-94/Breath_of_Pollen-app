@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Stack } from 'expo-router'
+import { Stack, useRouter } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
 import { StatusBar } from 'expo-status-bar'
@@ -30,10 +30,18 @@ Notifications.setNotificationHandler({
 
 function InnerLayout() {
   const { isDark } = useTheme()
+  const router = useRouter()
 
   useEffect(() => {
     initLanguage().then(() => SplashScreen.hideAsync())
   }, [])
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      router.replace('/(tabs)')
+    })
+    return () => sub.remove()
+  }, [router])
 
   return (
     <>

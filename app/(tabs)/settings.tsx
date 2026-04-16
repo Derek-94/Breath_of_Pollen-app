@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import { useFocusEffect } from 'expo-router'
@@ -54,6 +54,8 @@ export default function SettingsScreen() {
   const [showPicker, setShowPicker] = useState(false)
   const [notifEnabled, setNotifEnabled] = useState(false)
   const [notifHour, setNotifHour] = useState(DEFAULT_NOTIF_HOUR)
+  const [timeSaved, setTimeSaved] = useState(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     getNotificationSettings().then(({ enabled, hour }) => {
@@ -74,7 +76,7 @@ export default function SettingsScreen() {
       const tomorrow = data?.weeklyForecast[1]
       if (tomorrow) {
         await schedulePollenAlert(
-          { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
+          { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
           notifHour,
           i18n.language,
         )
@@ -86,26 +88,33 @@ export default function SettingsScreen() {
     }
   }, [data, notifHour, i18n.language, t])
 
-  const handleHourChange = useCallback(async (delta: number) => {
+  const handleHourChange = useCallback((delta: number) => {
     const newHour = Math.min(MAX_NOTIF_HOUR, Math.max(MIN_NOTIF_HOUR, notifHour + delta))
     if (newHour === notifHour) return
     setNotifHour(newHour)
-    await AsyncStorage.setItem(NOTIF_HOUR_KEY, String(newHour))
-    const tomorrow = data?.weeklyForecast[1]
-    if (notifEnabled && tomorrow) {
-      await schedulePollenAlert(
-        { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
-        newHour,
-        i18n.language,
-      )
-    }
+    setTimeSaved(false)
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(async () => {
+      await AsyncStorage.setItem(NOTIF_HOUR_KEY, String(newHour))
+      const tomorrow = data?.weeklyForecast[1]
+      if (notifEnabled && tomorrow) {
+        await schedulePollenAlert(
+          { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
+          newHour,
+          i18n.language,
+        )
+      }
+      setTimeSaved(true)
+      setTimeout(() => setTimeSaved(false), 1500)
+    }, 1000)
   }, [notifHour, notifEnabled, data, i18n.language])
 
   const handleTestNotif = useCallback(async () => {
     const tomorrow = data?.weeklyForecast[1]
     if (tomorrow) {
       await sendTestNotification(
-        { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
+        { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
         i18n.language,
       )
     }
@@ -138,7 +147,7 @@ export default function SettingsScreen() {
 
   if (showPicker) {
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, isDark && styles.containerDark]}>
         <View style={styles.pickerHeader}>
           <Pressable onPress={() => setShowPicker(false)}>
             <Text style={[styles.backText, isDark && styles.tintDark]}>{t('common.back')}</Text>
@@ -150,7 +159,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.header, isDark && styles.textDark]}>{t('settings.header')}</Text>
 
@@ -199,7 +208,12 @@ export default function SettingsScreen() {
             <>
               <View style={[styles.divider, isDark && styles.dividerDark]} />
               <View style={styles.row}>
-                <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifTime')}</Text>
+                <View>
+                  <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifTime')}</Text>
+                  {timeSaved && (
+                    <Text style={styles.savedText}>✓ 저장됨</Text>
+                  )}
+                </View>
                 <View style={styles.timeRow}>
                   <Pressable
                     onPress={() => handleHourChange(-1)}
@@ -487,6 +501,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#f87171',
+  },
+  savedText: {
+    fontSize: 11,
+    color: '#4ade80',
+    marginTop: 2,
   },
   tintDark: {
     color: '#fb923c',

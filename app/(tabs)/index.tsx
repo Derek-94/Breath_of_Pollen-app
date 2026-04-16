@@ -78,7 +78,7 @@ export default function TodayScreen() {
 
   if (shouldShowPicker) {
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+      <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark]}>
         <Logo />
         <LocationPicker
           onSelect={handlePrefectureSelect}
@@ -92,7 +92,7 @@ export default function TodayScreen() {
 
   if (locationLoading || dataLoading) {
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
+      <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <ActivityIndicator size="large" color={isDark ? '#fb923c' : '#f87171'} />
         <Text style={[styles.loadingText, isDark && styles.textMutedDark]}>
           {t('common.loading')}
@@ -103,7 +103,7 @@ export default function TodayScreen() {
 
   if (dataError || !data) {
     return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark, styles.center]}>
+      <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark, styles.center]}>
         <Text style={[styles.errorText, isDark && styles.textDark]}>
           {dataError ?? t('common.error')}
         </Text>
@@ -123,7 +123,7 @@ export default function TodayScreen() {
   const pm25Label = getPM25Label(data.pm2_5)
 
   return (
-    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={

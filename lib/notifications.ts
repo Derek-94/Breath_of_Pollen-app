@@ -15,6 +15,7 @@ export type TomorrowData = {
   icon: string
   high: number
   low: number
+  needsUmbrella: boolean
 }
 
 const TITLES: Record<string, (level: PollenLevel, unknown: boolean) => string> = {
@@ -39,9 +40,9 @@ const TITLES: Record<string, (level: PollenLevel, unknown: boolean) => string> =
 }
 
 const BODIES: Record<string, (d: TomorrowData) => string> = {
-  ko: (d) => `${d.icon} 최고 ${d.high}° / 최저 ${d.low}°`,
-  ja: (d) => `${d.icon} 最高 ${d.high}° / 最低 ${d.low}°`,
-  en: (d) => `${d.icon} High ${d.high}° / Low ${d.low}°`,
+  ko: (d) => `${d.icon} 최고 ${d.high}° / 최저 ${d.low}°${d.needsUmbrella ? ' · ☂️ 우산 챙기세요!' : '.'}`,
+  ja: (d) => `${d.icon} 最高 ${d.high}° / 最低 ${d.low}°${d.needsUmbrella ? ' · ☂️ 傘をお忘れなく！' : '。'}`,
+  en: (d) => `${d.icon} High ${d.high}° / Low ${d.low}°${d.needsUmbrella ? ' · ☂️ Bring an umbrella!' : '.'}`,
 }
 
 function buildContent(tomorrow: TomorrowData, language: string) {

@@ -63,6 +63,7 @@ export interface AppData {
     icon: string
     high: number
     low: number
+    needsUmbrella: boolean
     pollenLevel: PollenLevel
     /** true = 데이터 없음 (KR 4~7일차) — 회색 표시 */
     pollenUnknown: boolean
@@ -230,6 +231,7 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         icon: getWeatherInfo(weather.daily.weathercode[i]).emoji,
         high: Math.round(weather.daily.temperature_2m_max[i]),
         low: Math.round(weather.daily.temperature_2m_min[i]),
+        needsUmbrella: needsUmbrellaToday(weather.daily.weathercode[i]),
         pollenLevel: weeklyPollenLevels[i] ?? 1,
         pollenUnknown: krPollenDays !== undefined && i >= krPollenDays,
       }))
@@ -241,7 +243,7 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         getNotificationSettings().then(({ enabled, hour }) => {
           if (enabled) {
             schedulePollenAlert(
-              { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
+              { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
               hour,
               i18n.language,
             ).catch(() => {})
