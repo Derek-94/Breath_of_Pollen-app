@@ -39,6 +39,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         locationWhenInUsePermission: '現在地の天気・花粉情報を取得するために位置情報を使用します。',
       },
     ],
+    [
+      'expo-notifications',
+      {
+        color: '#f87171',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

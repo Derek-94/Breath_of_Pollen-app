@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import { useFocusEffect } from 'expo-router'
@@ -8,12 +8,16 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Switch,
+  Alert,
   Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import Constants from 'expo-constants'
 import { useLocationContext } from '@/contexts/LocationContext'
 import { useTheme, type ThemeMode } from '@/contexts/ThemeContext'
+import { useWeatherDataContext } from '@/contexts/WeatherDataContext'
 import { LocationPicker } from '@/components/LocationPicker'
 import {
   changeLanguage,
@@ -22,6 +26,18 @@ import {
   type SupportedLanguage,
 } from '@/lib/i18n'
 import { localizeLocationName } from '@/lib/prefecture-i18n'
+import {
+  requestNotificationPermission,
+  schedulePollenAlert,
+  cancelPollenAlert,
+  sendTestNotification,
+  getNotificationSettings,
+  NOTIF_ENABLED_KEY,
+  NOTIF_HOUR_KEY,
+  DEFAULT_NOTIF_HOUR,
+  MIN_NOTIF_HOUR,
+  MAX_NOTIF_HOUR,
+} from '@/lib/notifications'
 
 const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
   { value: 'system', labelKey: 'settings.themeSystem' },
@@ -34,7 +50,66 @@ export default function SettingsScreen() {
   const posthog = usePostHog()
   const { t, i18n } = useTranslation()
   const { location, setManualLocation, clearSavedLocation } = useLocationContext()
+  const { data } = useWeatherDataContext()
   const [showPicker, setShowPicker] = useState(false)
+  const [notifEnabled, setNotifEnabled] = useState(false)
+  const [notifHour, setNotifHour] = useState(DEFAULT_NOTIF_HOUR)
+
+  useEffect(() => {
+    getNotificationSettings().then(({ enabled, hour }) => {
+      setNotifEnabled(enabled)
+      setNotifHour(hour)
+    })
+  }, [])
+
+  const handleNotifToggle = useCallback(async (value: boolean) => {
+    if (value) {
+      const granted = await requestNotificationPermission()
+      if (!granted) {
+        Alert.alert(t('settings.notifPermissionDenied'))
+        return
+      }
+      await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true')
+      setNotifEnabled(true)
+      const tomorrow = data?.weeklyForecast[1]
+      if (tomorrow) {
+        await schedulePollenAlert(
+          { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
+          notifHour,
+          i18n.language,
+        )
+      }
+    } else {
+      await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false')
+      await cancelPollenAlert()
+      setNotifEnabled(false)
+    }
+  }, [data, notifHour, i18n.language, t])
+
+  const handleHourChange = useCallback(async (delta: number) => {
+    const newHour = Math.min(MAX_NOTIF_HOUR, Math.max(MIN_NOTIF_HOUR, notifHour + delta))
+    if (newHour === notifHour) return
+    setNotifHour(newHour)
+    await AsyncStorage.setItem(NOTIF_HOUR_KEY, String(newHour))
+    const tomorrow = data?.weeklyForecast[1]
+    if (notifEnabled && tomorrow) {
+      await schedulePollenAlert(
+        { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
+        newHour,
+        i18n.language,
+      )
+    }
+  }, [notifHour, notifEnabled, data, i18n.language])
+
+  const handleTestNotif = useCallback(async () => {
+    const tomorrow = data?.weeklyForecast[1]
+    if (tomorrow) {
+      await sendTestNotification(
+        { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low },
+        i18n.language,
+      )
+    }
+  }, [data, i18n.language])
 
   useFocusEffect(
     useCallback(() => {
@@ -103,6 +178,56 @@ export default function SettingsScreen() {
                 {t('settings.resetLocation')}
               </Text>
             </Pressable>
+          )}
+        </View>
+
+        {/* Notification section */}
+        <View style={[styles.card, isDark && styles.cardDark]}>
+          <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.notification')}</Text>
+
+          <View style={styles.row}>
+            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifToggle')}</Text>
+            <Switch
+              value={notifEnabled}
+              onValueChange={handleNotifToggle}
+              trackColor={{ false: '#ccc', true: '#f87171' }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          {notifEnabled && (
+            <>
+              <View style={[styles.divider, isDark && styles.dividerDark]} />
+              <View style={styles.row}>
+                <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifTime')}</Text>
+                <View style={styles.timeRow}>
+                  <Pressable
+                    onPress={() => handleHourChange(-1)}
+                    style={styles.timeBtn}
+                    disabled={notifHour <= MIN_NOTIF_HOUR}
+                  >
+                    <Text style={[styles.timeBtnText, notifHour <= MIN_NOTIF_HOUR && styles.timeBtnDisabled]}>‹</Text>
+                  </Pressable>
+                  <Text style={[styles.timeValue, isDark && styles.textDark]}>
+                    {String(notifHour).padStart(2, '0')}:00
+                  </Text>
+                  <Pressable
+                    onPress={() => handleHourChange(1)}
+                    style={styles.timeBtn}
+                    disabled={notifHour >= MAX_NOTIF_HOUR}
+                  >
+                    <Text style={[styles.timeBtnText, notifHour >= MAX_NOTIF_HOUR && styles.timeBtnDisabled]}>›</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View style={[styles.divider, isDark && styles.dividerDark]} />
+              <Pressable
+                style={({ pressed }) => [styles.testButton, pressed && styles.buttonPressed]}
+                onPress={handleTestNotif}
+              >
+                <Text style={styles.testButtonText}>{t('settings.notifTest')}</Text>
+              </Pressable>
+            </>
           )}
         </View>
 
@@ -324,6 +449,42 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
+    fontWeight: '500',
+    color: '#f87171',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  timeBtnText: {
+    fontSize: 22,
+    color: '#f87171',
+    lineHeight: 26,
+  },
+  timeBtnDisabled: {
+    color: '#ccc',
+  },
+  timeValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    minWidth: 52,
+    textAlign: 'center',
+  },
+  testButton: {
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#fff3f3',
+    alignItems: 'center',
+  },
+  testButtonText: {
+    fontSize: 13,
     fontWeight: '500',
     color: '#f87171',
   },
