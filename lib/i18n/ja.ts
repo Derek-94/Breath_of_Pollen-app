@@ -203,6 +203,13 @@ const ja = {
     footer: '花粉症で悩む皆さんのために ❤️',
   },
 
+  review: {
+    title: 'アプリはお役に立てていますか？🌿',
+    body: '高評価はより多くの方にアプリを知っていただく力になります。',
+    confirm: 'はい、評価する ⭐',
+    dismiss: 'あとで',
+  },
+
   comparison: {
     label: '昨日と比較',
     tempColder: '{{diff}}°C 寒い',

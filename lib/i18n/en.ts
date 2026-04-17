@@ -203,6 +203,13 @@ const en = {
     footer: 'Made with ❤️ for allergy sufferers',
   },
 
+  review: {
+    title: 'Enjoying the app? 🌿',
+    body: 'A quick rating helps others discover the app and keeps us motivated.',
+    confirm: 'Rate us ⭐',
+    dismiss: 'Later',
+  },
+
   comparison: {
     label: 'vs. Yesterday',
     tempColder: '{{diff}}°C colder',

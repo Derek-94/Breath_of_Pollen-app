@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import {
@@ -22,8 +22,10 @@ import { OutfitDetail } from '@/components/OutfitDetail'
 import { InfoCardDetail } from '@/components/InfoCardDetail'
 import { PollenDetail } from '@/components/PollenDetail'
 import { LocationPicker } from '@/components/LocationPicker'
+import { ReviewPrompt } from '@/components/ReviewPrompt'
 import { getUVLabel, getPM25Label, getLaundryStatus } from '@/lib/weather-utils'
 import { localizeLocationName } from '@/lib/prefecture-i18n'
+import { shouldShowReviewPrompt } from '@/lib/review'
 
 function Logo() {
   const { isDark } = useTheme()
@@ -52,6 +54,15 @@ export default function TodayScreen() {
   const [activeInfoCard, setActiveInfoCard] = useState<'uv' | 'pm25' | 'humidity' | null>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false)
+
+  useEffect(() => {
+    if (data) {
+      shouldShowReviewPrompt().then((show) => {
+        if (show) setShowReviewPrompt(true)
+      })
+    }
+  }, [data])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -310,6 +321,10 @@ export default function TodayScreen() {
           laundryStatus={getLaundryStatus(data.pollenOverall, data.weatherCode)}
           onClose={() => setShowOutfitDetail(false)}
         />
+      )}
+
+      {showReviewPrompt && (
+        <ReviewPrompt onClose={() => setShowReviewPrompt(false)} />
       )}
     </SafeAreaView>
   )

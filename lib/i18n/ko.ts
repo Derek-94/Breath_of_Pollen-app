@@ -203,6 +203,13 @@ const ko = {
     footer: 'Made with ❤️ for allergy sufferers',
   },
 
+  review: {
+    title: '앱이 도움이 되고 있나요? 🌿',
+    body: '좋은 평가는 더 많은 사람들에게 앱을 알리는 데 큰 힘이 돼요.',
+    confirm: '네, 별점 남길게요 ⭐',
+    dismiss: '나중에',
+  },
+
   comparison: {
     label: '어제 대비',
     tempColder: '{{diff}}°C 더 추워요',

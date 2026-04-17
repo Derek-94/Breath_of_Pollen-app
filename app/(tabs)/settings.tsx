@@ -30,7 +30,6 @@ import {
   requestNotificationPermission,
   schedulePollenAlert,
   cancelPollenAlert,
-  sendTestNotification,
   getNotificationSettings,
   NOTIF_ENABLED_KEY,
   NOTIF_HOUR_KEY,
@@ -110,15 +109,6 @@ export default function SettingsScreen() {
     }, 1000)
   }, [notifHour, notifEnabled, data, i18n.language])
 
-  const handleTestNotif = useCallback(async () => {
-    const tomorrow = data?.weeklyForecast[1]
-    if (tomorrow) {
-      await sendTestNotification(
-        { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
-        i18n.language,
-      )
-    }
-  }, [data, i18n.language])
 
   useFocusEffect(
     useCallback(() => {
@@ -234,13 +224,6 @@ export default function SettingsScreen() {
                   </Pressable>
                 </View>
               </View>
-              <View style={[styles.divider, isDark && styles.dividerDark]} />
-              <Pressable
-                style={({ pressed }) => [styles.testButton, pressed && styles.buttonPressed]}
-                onPress={handleTestNotif}
-              >
-                <Text style={styles.testButtonText}>{t('settings.notifTest')}</Text>
-              </Pressable>
             </>
           )}
         </View>
@@ -489,18 +472,6 @@ const styles = StyleSheet.create({
     color: '#333',
     minWidth: 52,
     textAlign: 'center',
-  },
-  testButton: {
-    marginTop: 8,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#fff3f3',
-    alignItems: 'center',
-  },
-  testButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#f87171',
   },
   savedText: {
     fontSize: 11,

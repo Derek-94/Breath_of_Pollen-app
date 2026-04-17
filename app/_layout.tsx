@@ -9,6 +9,7 @@ import { WeatherDataProvider } from '@/contexts/WeatherDataContext'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 import '@/lib/i18n'
 import { initLanguage } from '@/lib/i18n'
+import { trackAppOpen } from '@/lib/review'
 import 'react-native-reanimated'
 
 export { ErrorBoundary } from 'expo-router'
@@ -34,6 +35,7 @@ function InnerLayout() {
 
   useEffect(() => {
     initLanguage().then(() => SplashScreen.hideAsync())
+    trackAppOpen()
   }, [])
 
   useEffect(() => {
