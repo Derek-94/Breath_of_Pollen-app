@@ -231,6 +231,20 @@ const ja = {
     confirmOk: '変更',
     confirmCancel: 'キャンセル',
   },
+
+  onboarding: {
+    intro: {
+      title: '花粉・天気をひと目で 🌿',
+      body: '今日の花粉レベル、天気、コーデ提案まで\n毎朝スマートに準備しましょう。',
+      next: 'はじめる',
+    },
+    notif: {
+      title: '通知設定',
+      body: '明日の花粉・天気情報を\n設定した時間にお知らせします 🙋‍♂️',
+      enable: '通知をオンにする 🔔',
+      skip: 'あとで',
+    },
+  },
 } as const
 
 export default ja

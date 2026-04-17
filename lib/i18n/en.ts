@@ -231,6 +231,20 @@ const en = {
     confirmOk: 'Change',
     confirmCancel: 'Cancel',
   },
+
+  onboarding: {
+    intro: {
+      title: 'Pollen & Weather at a Glance 🌿',
+      body: "Today's pollen level, weather, and outfit tips—\nget ready smarter every day.",
+      next: "Let's Start",
+    },
+    notif: {
+      title: 'Notification Setup',
+      body: "We'll send you tomorrow's pollen\nand weather info at your chosen time 🙋‍♂️",
+      enable: 'Enable Notifications 🔔',
+      skip: 'Later',
+    },
+  },
 } as const
 
 export default en

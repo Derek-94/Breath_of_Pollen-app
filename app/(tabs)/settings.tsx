@@ -197,7 +197,7 @@ export default function SettingsScreen() {
           {notifEnabled && (
             <>
               <View style={[styles.divider, isDark && styles.dividerDark]} />
-              <View style={styles.row}>
+              <View style={[styles.row, styles.rowLast]}>
                 <View>
                   <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifTime')}</Text>
                   {timeSaved && (
@@ -449,6 +449,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#f87171',
   },
+  rowLast: {
+    paddingBottom: 0,
+  },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -461,7 +464,8 @@ const styles = StyleSheet.create({
   timeBtnText: {
     fontSize: 22,
     color: '#f87171',
-    lineHeight: 26,
+    lineHeight: 22,
+    textAlignVertical: 'center',
   },
   timeBtnDisabled: {
     color: '#ccc',

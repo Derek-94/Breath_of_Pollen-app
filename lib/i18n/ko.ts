@@ -231,6 +231,20 @@ const ko = {
     confirmOk: '변경',
     confirmCancel: '취소',
   },
+
+  onboarding: {
+    intro: {
+      title: '꽃가루 & 날씨 한눈에 🌿',
+      body: '오늘의 꽃가루 수치, 날씨, 코디 추천까지\n매일 스마트하게 준비하세요.',
+      next: '시작하기',
+    },
+    notif: {
+      title: '알림 설정',
+      body: '내일 꽃가루, 날씨 정보를\n설정한 시간에 알려드릴게요 🙋‍♂️',
+      enable: '알림 켜기 🔔',
+      skip: '나중에',
+    },
+  },
 } as const
 
 export default ko
