@@ -192,6 +192,7 @@ const ko = {
     notification: '알림',
     notifToggle: '저녁 꽃가루 알림',
     notifTime: '알림 시간',
+    notifSaved: '✓ 저장됨',
     notifTest: '지금 테스트 알림 보내기',
     notifPermissionDenied: '설정 앱에서 알림 권한을 허용해주세요',
     appInfo: '앱 정보',

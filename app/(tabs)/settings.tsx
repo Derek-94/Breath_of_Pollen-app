@@ -201,7 +201,7 @@ export default function SettingsScreen() {
                 <View>
                   <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifTime')}</Text>
                   {timeSaved && (
-                    <Text style={styles.savedText}>✓ 저장됨</Text>
+                    <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
                   )}
                 </View>
                 <View style={styles.timeRow}>
