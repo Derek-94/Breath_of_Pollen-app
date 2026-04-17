@@ -34,6 +34,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withLocalizedAppName',
     'expo-router',
     'expo-localization',
+    'expo-font',
+    'expo-secure-store',
+    'expo-web-browser',
     [
       'expo-location',
       {
