@@ -14,6 +14,12 @@ const LOCALIZED_LOCATION_PERMISSION = {
   en: 'Used to get weather and pollen information for your current location.',
 }
 
+const LOCALIZED_NOTIFICATION_PERMISSION = {
+  ja: '明日の花粉・天気情報を夕方にお知らせします。',
+  ko: '내일 꽃가루·날씨 정보를 저녁에 알려드립니다.',
+  en: "We'll notify you about tomorrow's pollen and weather each evening.",
+}
+
 const genUUID = () => {
   const hex = '0123456789ABCDEF'
   let id = ''
@@ -41,10 +47,11 @@ const withIosLocalizedAppName = (config) => {
       for (const [lang, name] of Object.entries(LOCALIZED_NAMES)) {
         const lprojDir = path.join(iosDir, `${lang}.lproj`)
         if (!fs.existsSync(lprojDir)) fs.mkdirSync(lprojDir, { recursive: true })
-        const permission = LOCALIZED_LOCATION_PERMISSION[lang]
+        const locationPermission = LOCALIZED_LOCATION_PERMISSION[lang]
+        const notifPermission = LOCALIZED_NOTIFICATION_PERMISSION[lang]
         fs.writeFileSync(
           path.join(lprojDir, 'InfoPlist.strings'),
-          `CFBundleDisplayName = "${name}";\nNSLocationWhenInUseUsageDescription = "${permission}";\n`,
+          `CFBundleDisplayName = "${name}";\nNSLocationWhenInUseUsageDescription = "${locationPermission}";\nNSUserNotificationUsageDescription = "${notifPermission}";\n`,
           'utf8'
         )
       }
