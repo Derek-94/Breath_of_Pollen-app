@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Stack, useRouter } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
@@ -12,6 +13,7 @@ import '@/lib/i18n'
 import { initLanguage } from '@/lib/i18n'
 import { trackAppOpen } from '@/lib/review'
 import { Onboarding, ONBOARDING_COMPLETE_KEY } from '@/components/Onboarding'
+import { WhatsNew } from '@/components/WhatsNew'
 import 'react-native-reanimated'
 
 export { ErrorBoundary } from 'expo-router'
@@ -33,17 +35,31 @@ Notifications.setNotificationHandler({
 
 function InnerLayout() {
   const { isDark } = useTheme()
+  const { t } = useTranslation()
   const router = useRouter()
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
 
   useEffect(() => {
     initLanguage().then(async () => {
-      const done = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY)
-      if (done !== 'true') setShowOnboarding(true)
+      const [onboardingDone, whatsNewShown] = await Promise.all([
+        AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY),
+        AsyncStorage.getItem('whats_new_shown_v1.1.0'),
+      ])
+      if (onboardingDone !== 'true') {
+        setShowOnboarding(true)
+      } else if (whatsNewShown !== 'true') {
+        setShowWhatsNew(true)
+      }
       SplashScreen.hideAsync()
     })
     trackAppOpen()
   }, [])
+
+  const handleWhatsNewClose = async () => {
+    await AsyncStorage.setItem('whats_new_shown_v1.1.0', 'true')
+    setShowWhatsNew(false)
+  }
 
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(() => {
@@ -61,6 +77,16 @@ function InnerLayout() {
       </Stack>
       {showOnboarding && (
         <Onboarding onComplete={() => setShowOnboarding(false)} />
+      )}
+      {showWhatsNew && (
+        <WhatsNew
+          version="1.1.0"
+          features={[
+            { emoji: '🔔', title: t('whatsNew.v110.notif.title'), desc: t('whatsNew.v110.notif.desc') },
+            { emoji: '👋', title: t('whatsNew.v110.onboarding.title'), desc: t('whatsNew.v110.onboarding.desc') },
+          ]}
+          onClose={handleWhatsNewClose}
+        />
       )}
     </>
   )

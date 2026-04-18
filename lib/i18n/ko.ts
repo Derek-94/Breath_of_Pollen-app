@@ -233,6 +233,15 @@ const ko = {
     confirmCancel: '취소',
   },
 
+  whatsNew: {
+    title: '새로운 기능 🎉',
+    confirm: '확인',
+    v110: {
+      notif: { title: '꽃가루 알림', desc: '저녁에 내일 꽃가루 정보를 알려드려요' },
+      onboarding: { title: '온보딩 화면', desc: '앱 첫 실행 시 소개 및 알림 설정 안내' },
+    },
+  },
+
   onboarding: {
     intro: {
       title: '꽃가루 & 날씨 한눈에 🌿',

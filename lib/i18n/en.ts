@@ -233,6 +233,15 @@ const en = {
     confirmCancel: 'Cancel',
   },
 
+  whatsNew: {
+    title: "What's New 🎉",
+    confirm: 'Got it',
+    v110: {
+      notif: { title: 'Pollen Alert', desc: 'Get tomorrow\'s pollen forecast every evening' },
+      onboarding: { title: 'Onboarding Screen', desc: 'App intro and notification setup on first launch' },
+    },
+  },
+
   onboarding: {
     intro: {
       title: 'Pollen & Weather at a Glance 🌿',

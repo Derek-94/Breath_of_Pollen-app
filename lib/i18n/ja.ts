@@ -233,6 +233,15 @@ const ja = {
     confirmCancel: 'キャンセル',
   },
 
+  whatsNew: {
+    title: '新機能 🎉',
+    confirm: '確認',
+    v110: {
+      notif: { title: '花粉アラート', desc: '夕方に明日の花粉情報をお知らせします' },
+      onboarding: { title: 'オンボーディング画面', desc: '初回起動時にアプリ紹介と通知設定をご案内' },
+    },
+  },
+
   onboarding: {
     intro: {
       title: '花粉・天気をひと目で 🌿',
