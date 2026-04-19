@@ -191,6 +191,7 @@ const ko = {
     language: '언어',
     notification: '알림',
     notifToggle: '저녁 꽃가루 알림',
+    notifMorningToggle: '아침 꽃가루 알림',
     notifTime: '알림 시간',
     notifSaved: '✓ 저장됨',
     notifTest: '지금 테스트 알림 보내기',

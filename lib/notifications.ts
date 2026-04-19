@@ -2,10 +2,25 @@ import * as Notifications from 'expo-notifications'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { PollenLevel } from '@/lib/weather-utils'
 
+// Evening (기존 키 유지 — 기존 유저 설정 보존)
 export const NOTIF_ENABLED_KEY = 'notif_enabled'
 export const NOTIF_HOUR_KEY = 'notif_hour'
+export const NOTIF_MINUTE_KEY = 'notif_minute'
 export const NOTIF_ID_KEY = 'notif_alert_id'
-export const DEFAULT_NOTIF_HOUR = 21
+
+// Morning (신규)
+export const NOTIF_MORNING_ENABLED_KEY = 'notif_morning_enabled'
+export const NOTIF_MORNING_HOUR_KEY = 'notif_morning_hour'
+export const NOTIF_MORNING_MINUTE_KEY = 'notif_morning_minute'
+export const NOTIF_MORNING_ID_KEY = 'notif_morning_alert_id'
+
+export const DEFAULT_EVENING_HOUR = 21
+export const DEFAULT_EVENING_MINUTE = 0
+export const DEFAULT_MORNING_HOUR = 7
+export const DEFAULT_MORNING_MINUTE = 0
+
+// 하위호환
+export const DEFAULT_NOTIF_HOUR = DEFAULT_EVENING_HOUR
 export const MIN_NOTIF_HOUR = 17
 export const MAX_NOTIF_HOUR = 23
 
@@ -59,14 +74,69 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return status === 'granted'
 }
 
-export async function getNotificationSettings(): Promise<{ enabled: boolean; hour: number }> {
-  const [enabled, hour] = await Promise.all([
+export type NotifSlotSettings = {
+  enabled: boolean
+  hour: number
+  minute: number
+}
+
+export async function getNotificationSettings(): Promise<{
+  evening: NotifSlotSettings
+  morning: NotifSlotSettings
+}> {
+  const [
+    eveningEnabled, eveningHour, eveningMinute,
+    morningEnabled, morningHour, morningMinute,
+  ] = await Promise.all([
     AsyncStorage.getItem(NOTIF_ENABLED_KEY),
     AsyncStorage.getItem(NOTIF_HOUR_KEY),
+    AsyncStorage.getItem(NOTIF_MINUTE_KEY),
+    AsyncStorage.getItem(NOTIF_MORNING_ENABLED_KEY),
+    AsyncStorage.getItem(NOTIF_MORNING_HOUR_KEY),
+    AsyncStorage.getItem(NOTIF_MORNING_MINUTE_KEY),
   ])
   return {
-    enabled: enabled === 'true',
-    hour: hour ? parseInt(hour, 10) : DEFAULT_NOTIF_HOUR,
+    evening: {
+      enabled: eveningEnabled === 'true',
+      hour: eveningHour ? parseInt(eveningHour, 10) : DEFAULT_EVENING_HOUR,
+      minute: eveningMinute ? parseInt(eveningMinute, 10) : DEFAULT_EVENING_MINUTE,
+    },
+    morning: {
+      enabled: morningEnabled === 'true',
+      hour: morningHour ? parseInt(morningHour, 10) : DEFAULT_MORNING_HOUR,
+      minute: morningMinute ? parseInt(morningMinute, 10) : DEFAULT_MORNING_MINUTE,
+    },
+  }
+}
+
+async function scheduleNotif(
+  idKey: string,
+  tomorrow: TomorrowData,
+  hour: number,
+  minute: number,
+  language: string,
+): Promise<void> {
+  const existingId = await AsyncStorage.getItem(idKey)
+  if (existingId) {
+    await Notifications.cancelScheduledNotificationAsync(existingId).catch(() => {})
+  }
+  const { title, body } = buildContent(tomorrow, language)
+  const id = await Notifications.scheduleNotificationAsync({
+    content: { title, body, sound: true },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour,
+      minute,
+    },
+  })
+  await AsyncStorage.setItem(idKey, id)
+}
+
+async function cancelNotif(idKey: string): Promise<void> {
+  const id = await AsyncStorage.getItem(idKey)
+  if (id) {
+    await Notifications.cancelScheduledNotificationAsync(id).catch(() => {})
+    await AsyncStorage.removeItem(idKey)
   }
 }
 
@@ -74,26 +144,26 @@ export async function schedulePollenAlert(
   tomorrow: TomorrowData,
   hour: number,
   language: string,
+  minute = 0,
 ): Promise<void> {
-  await cancelPollenAlert()
-  const { title, body } = buildContent(tomorrow, language)
-  const id = await Notifications.scheduleNotificationAsync({
-    content: { title, body, sound: true },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute: 0,
-    },
-  })
-  await AsyncStorage.setItem(NOTIF_ID_KEY, id)
+  await scheduleNotif(NOTIF_ID_KEY, tomorrow, hour, minute, language)
+}
+
+export async function scheduleMorningAlert(
+  tomorrow: TomorrowData,
+  hour: number,
+  minute: number,
+  language: string,
+): Promise<void> {
+  await scheduleNotif(NOTIF_MORNING_ID_KEY, tomorrow, hour, minute, language)
 }
 
 export async function cancelPollenAlert(): Promise<void> {
-  const id = await AsyncStorage.getItem(NOTIF_ID_KEY)
-  if (id) {
-    await Notifications.cancelScheduledNotificationAsync(id).catch(() => {})
-    await AsyncStorage.removeItem(NOTIF_ID_KEY)
-  }
+  await cancelNotif(NOTIF_ID_KEY)
+}
+
+export async function cancelMorningAlert(): Promise<void> {
+  await cancelNotif(NOTIF_MORNING_ID_KEY)
 }
 
 export async function sendTestNotification(

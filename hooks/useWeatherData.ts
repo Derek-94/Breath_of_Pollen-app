@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
-import { getNotificationSettings, schedulePollenAlert } from '@/lib/notifications'
+import { getNotificationSettings, schedulePollenAlert, scheduleMorningAlert } from '@/lib/notifications'
 import { fetchWeather, fetchPollen, fetchPollenKR, fetchLocation, fetchAirQuality, fetchYesterdayHighTemp } from '@/lib/api'
 import { findNearestKRRegion } from '@/lib/korea-coords'
 import {
@@ -240,13 +240,13 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
 
       const tomorrow = weeklyForecast[1]
       if (tomorrow) {
-        getNotificationSettings().then(({ enabled, hour }) => {
-          if (enabled) {
-            schedulePollenAlert(
-              { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
-              hour,
-              i18n.language,
-            ).catch(() => {})
+        getNotificationSettings().then(({ evening, morning }) => {
+          const tomorrowData = { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella }
+          if (evening.enabled) {
+            schedulePollenAlert(tomorrowData, evening.hour, i18n.language, evening.minute).catch(() => {})
+          }
+          if (morning.enabled) {
+            scheduleMorningAlert(tomorrowData, morning.hour, morning.minute, i18n.language).catch(() => {})
           }
         }).catch(() => {})
       }

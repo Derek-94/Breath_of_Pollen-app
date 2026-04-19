@@ -12,6 +12,7 @@ import {
   Alert,
   Linking,
 } from 'react-native'
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Constants from 'expo-constants'
@@ -30,12 +31,19 @@ import {
   requestNotificationPermission,
   schedulePollenAlert,
   cancelPollenAlert,
+  scheduleMorningAlert,
+  cancelMorningAlert,
   getNotificationSettings,
   NOTIF_ENABLED_KEY,
   NOTIF_HOUR_KEY,
-  DEFAULT_NOTIF_HOUR,
-  MIN_NOTIF_HOUR,
-  MAX_NOTIF_HOUR,
+  NOTIF_MINUTE_KEY,
+  NOTIF_MORNING_ENABLED_KEY,
+  NOTIF_MORNING_HOUR_KEY,
+  NOTIF_MORNING_MINUTE_KEY,
+  DEFAULT_EVENING_HOUR,
+  DEFAULT_EVENING_MINUTE,
+  DEFAULT_MORNING_HOUR,
+  DEFAULT_MORNING_MINUTE,
 } from '@/lib/notifications'
 
 const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
@@ -44,6 +52,12 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
   { value: 'dark', labelKey: 'settings.themeDark' },
 ]
 
+function timeToDate(hour: number, minute: number): Date {
+  const d = new Date()
+  d.setHours(hour, minute, 0, 0)
+  return d
+}
+
 export default function SettingsScreen() {
   const { isDark, themeMode, setThemeMode } = useTheme()
   const posthog = usePostHog()
@@ -51,19 +65,39 @@ export default function SettingsScreen() {
   const { location, setManualLocation, clearSavedLocation } = useLocationContext()
   const { data } = useWeatherDataContext()
   const [showPicker, setShowPicker] = useState(false)
-  const [notifEnabled, setNotifEnabled] = useState(false)
-  const [notifHour, setNotifHour] = useState(DEFAULT_NOTIF_HOUR)
-  const [timeSaved, setTimeSaved] = useState(false)
+
+  const [eveningEnabled, setEveningEnabled] = useState(false)
+  const [eveningDate, setEveningDate] = useState(timeToDate(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE))
+
+  const [morningEnabled, setMorningEnabled] = useState(false)
+  const [morningDate, setMorningDate] = useState(timeToDate(DEFAULT_MORNING_HOUR, DEFAULT_MORNING_MINUTE))
+
+  const [savedSlot, setSavedSlot] = useState<'evening' | 'morning' | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    getNotificationSettings().then(({ enabled, hour }) => {
-      setNotifEnabled(enabled)
-      setNotifHour(hour)
+    getNotificationSettings().then(({ evening, morning }) => {
+      setEveningEnabled(evening.enabled)
+      setEveningDate(timeToDate(evening.hour, evening.minute))
+      setMorningEnabled(morning.enabled)
+      setMorningDate(timeToDate(morning.hour, morning.minute))
     })
   }, [])
 
-  const handleNotifToggle = useCallback(async (value: boolean) => {
+  const getTomorrowData = useCallback(() => {
+    const tomorrow = data?.weeklyForecast[1]
+    if (!tomorrow) return null
+    return {
+      pollenLevel: tomorrow.pollenLevel,
+      pollenUnknown: tomorrow.pollenUnknown,
+      icon: tomorrow.icon,
+      high: tomorrow.high,
+      low: tomorrow.low,
+      needsUmbrella: tomorrow.needsUmbrella,
+    }
+  }, [data])
+
+  const handleEveningToggle = useCallback(async (value: boolean) => {
     if (value) {
       const granted = await requestNotificationPermission()
       if (!granted) {
@@ -71,44 +105,81 @@ export default function SettingsScreen() {
         return
       }
       await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true')
-      setNotifEnabled(true)
-      const tomorrow = data?.weeklyForecast[1]
+      setEveningEnabled(true)
+      const tomorrow = getTomorrowData()
       if (tomorrow) {
-        await schedulePollenAlert(
-          { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
-          notifHour,
-          i18n.language,
-        )
+        await schedulePollenAlert(tomorrow, eveningDate.getHours(), i18n.language, eveningDate.getMinutes())
       }
     } else {
       await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false')
       await cancelPollenAlert()
-      setNotifEnabled(false)
+      setEveningEnabled(false)
     }
-  }, [data, notifHour, i18n.language, t])
+  }, [eveningDate, i18n.language, t, getTomorrowData])
 
-  const handleHourChange = useCallback((delta: number) => {
-    const newHour = Math.min(MAX_NOTIF_HOUR, Math.max(MIN_NOTIF_HOUR, notifHour + delta))
-    if (newHour === notifHour) return
-    setNotifHour(newHour)
-    setTimeSaved(false)
+  const handleMorningToggle = useCallback(async (value: boolean) => {
+    if (value) {
+      const granted = await requestNotificationPermission()
+      if (!granted) {
+        Alert.alert(t('settings.notifPermissionDenied'))
+        return
+      }
+      await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'true')
+      setMorningEnabled(true)
+      const tomorrow = getTomorrowData()
+      if (tomorrow) {
+        await scheduleMorningAlert(tomorrow, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
+      }
+    } else {
+      await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'false')
+      await cancelMorningAlert()
+      setMorningEnabled(false)
+    }
+  }, [morningDate, i18n.language, t, getTomorrowData])
+
+  const handleEveningTimeChange = useCallback((_: DateTimePickerEvent, date?: Date) => {
+    if (!date) return
+    setEveningDate(date)
+    setSavedSlot(null)
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
-      await AsyncStorage.setItem(NOTIF_HOUR_KEY, String(newHour))
-      const tomorrow = data?.weeklyForecast[1]
-      if (notifEnabled && tomorrow) {
-        await schedulePollenAlert(
-          { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella },
-          newHour,
-          i18n.language,
-        )
+      const h = date.getHours()
+      const m = date.getMinutes()
+      await Promise.all([
+        AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)),
+        AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m)),
+      ])
+      const tomorrow = getTomorrowData()
+      if (eveningEnabled && tomorrow) {
+        await schedulePollenAlert(tomorrow, h, i18n.language, m)
       }
-      setTimeSaved(true)
-      setTimeout(() => setTimeSaved(false), 1500)
-    }, 1000)
-  }, [notifHour, notifEnabled, data, i18n.language])
+      setSavedSlot('evening')
+      setTimeout(() => setSavedSlot(null), 1500)
+    }, 800)
+  }, [eveningEnabled, i18n.language, getTomorrowData])
 
+  const handleMorningTimeChange = useCallback((_: DateTimePickerEvent, date?: Date) => {
+    if (!date) return
+    setMorningDate(date)
+    setSavedSlot(null)
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(async () => {
+      const h = date.getHours()
+      const m = date.getMinutes()
+      await Promise.all([
+        AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)),
+        AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m)),
+      ])
+      const tomorrow = getTomorrowData()
+      if (morningEnabled && tomorrow) {
+        await scheduleMorningAlert(tomorrow, h, m, i18n.language)
+      }
+      setSavedSlot('morning')
+      setTimeout(() => setSavedSlot(null), 1500)
+    }, 800)
+  }, [morningEnabled, i18n.language, getTomorrowData])
 
   useFocusEffect(
     useCallback(() => {
@@ -184,47 +255,58 @@ export default function SettingsScreen() {
         <View style={[styles.card, isDark && styles.cardDark]}>
           <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.notification')}</Text>
 
+          {/* Evening */}
           <View style={styles.row}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifToggle')}</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>🌙 {t('settings.notifToggle')}</Text>
             <Switch
-              value={notifEnabled}
-              onValueChange={handleNotifToggle}
+              value={eveningEnabled}
+              onValueChange={handleEveningToggle}
               trackColor={{ false: '#ccc', true: '#f87171' }}
               thumbColor="#fff"
             />
           </View>
+          {eveningEnabled && (
+            <View style={styles.timePickerWrap}>
+              {savedSlot === 'evening' && (
+                <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
+              )}
+              <DateTimePicker
+                value={eveningDate}
+                mode="time"
+                display="spinner"
+                onChange={handleEveningTimeChange}
+                textColor={isDark ? '#eee' : '#111'}
+                style={styles.dtPicker}
+              />
+            </View>
+          )}
 
-          {notifEnabled && (
-            <>
-              <View style={[styles.divider, isDark && styles.dividerDark]} />
-              <View style={[styles.row, styles.rowLast]}>
-                <View>
-                  <Text style={[styles.label, isDark && styles.textMuted]}>{t('settings.notifTime')}</Text>
-                  {timeSaved && (
-                    <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
-                  )}
-                </View>
-                <View style={styles.timeRow}>
-                  <Pressable
-                    onPress={() => handleHourChange(-1)}
-                    style={styles.timeBtn}
-                    disabled={notifHour <= MIN_NOTIF_HOUR}
-                  >
-                    <Text style={[styles.timeBtnText, notifHour <= MIN_NOTIF_HOUR && styles.timeBtnDisabled]}>‹</Text>
-                  </Pressable>
-                  <Text style={[styles.timeValue, isDark && styles.textDark]}>
-                    {String(notifHour).padStart(2, '0')}:00
-                  </Text>
-                  <Pressable
-                    onPress={() => handleHourChange(1)}
-                    style={styles.timeBtn}
-                    disabled={notifHour >= MAX_NOTIF_HOUR}
-                  >
-                    <Text style={[styles.timeBtnText, notifHour >= MAX_NOTIF_HOUR && styles.timeBtnDisabled]}>›</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </>
+          <View style={[styles.divider, isDark && styles.dividerDark]} />
+
+          {/* Morning */}
+          <View style={[styles.row, styles.rowLast]}>
+            <Text style={[styles.label, isDark && styles.textMuted]}>🌅 {t('settings.notifMorningToggle')}</Text>
+            <Switch
+              value={morningEnabled}
+              onValueChange={handleMorningToggle}
+              trackColor={{ false: '#ccc', true: '#f87171' }}
+              thumbColor="#fff"
+            />
+          </View>
+          {morningEnabled && (
+            <View style={styles.timePickerWrap}>
+              {savedSlot === 'morning' && (
+                <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
+              )}
+              <DateTimePicker
+                value={morningDate}
+                mode="time"
+                display="spinner"
+                onChange={handleMorningTimeChange}
+                textColor={isDark ? '#eee' : '#111'}
+                style={styles.dtPicker}
+              />
+            </View>
           )}
         </View>
 
@@ -378,6 +460,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
+  rowLast: {
+    paddingBottom: 0,
+  },
   label: {
     fontSize: 14,
     color: '#666',
@@ -390,6 +475,7 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#f0f0f0',
+    marginVertical: 4,
   },
   dividerDark: {
     backgroundColor: '#333',
@@ -449,38 +535,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#f87171',
   },
-  rowLast: {
-    paddingBottom: 0,
-  },
-  timeRow: {
-    flexDirection: 'row',
+  timePickerWrap: {
     alignItems: 'center',
-    gap: 4,
+    marginTop: 4,
   },
-  timeBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  timeBtnText: {
-    fontSize: 22,
-    color: '#f87171',
-    lineHeight: 22,
-    textAlignVertical: 'center',
-  },
-  timeBtnDisabled: {
-    color: '#ccc',
-  },
-  timeValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    minWidth: 52,
-    textAlign: 'center',
+  dtPicker: {
+    width: '100%',
+    height: 150,
   },
   savedText: {
     fontSize: 11,
     color: '#4ade80',
-    marginTop: 2,
+    marginBottom: 4,
   },
   tintDark: {
     color: '#fb923c',

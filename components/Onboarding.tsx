@@ -8,6 +8,7 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native'
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -15,14 +16,19 @@ import {
   requestNotificationPermission,
   NOTIF_ENABLED_KEY,
   NOTIF_HOUR_KEY,
-  DEFAULT_NOTIF_HOUR,
+  NOTIF_MINUTE_KEY,
+  DEFAULT_EVENING_HOUR,
+  DEFAULT_EVENING_MINUTE,
 } from '@/lib/notifications'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 export const ONBOARDING_COMPLETE_KEY = 'onboarding_complete'
 
-const MIN_NOTIF_HOUR = 17
-const MAX_NOTIF_HOUR = 23
+function timeToDate(hour: number, minute: number): Date {
+  const d = new Date()
+  d.setHours(hour, minute, 0, 0)
+  return d
+}
 
 interface OnboardingProps {
   onComplete: () => void
@@ -33,7 +39,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const { t } = useTranslation()
   const [page, setPage] = useState(0)
   const pageRef = useRef(0)
-  const [notifHour, setNotifHour] = useState(DEFAULT_NOTIF_HOUR)
+  const [notifDate, setNotifDate] = useState(timeToDate(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE))
   const slideAnim = useRef(new Animated.Value(0)).current
 
   const goToPage = (next: number) => {
@@ -75,7 +81,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       if (granted) {
         await AsyncStorage.multiSet([
           [NOTIF_ENABLED_KEY, 'true'],
-          [NOTIF_HOUR_KEY, String(notifHour)],
+          [NOTIF_HOUR_KEY, String(notifDate.getHours())],
+          [NOTIF_MINUTE_KEY, String(notifDate.getMinutes())],
         ])
       }
     }
@@ -116,29 +123,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               {t('onboarding.notif.body')}
             </Text>
 
-            <View style={[styles.timePicker, isDark && styles.timePickerDark]}>
-              <Pressable
-                onPress={() => setNotifHour(h => Math.max(MIN_NOTIF_HOUR, h - 1))}
-                style={styles.timeBtn}
-                disabled={notifHour <= MIN_NOTIF_HOUR}
-              >
-                <Text style={[styles.timeBtnText, notifHour <= MIN_NOTIF_HOUR && styles.timeBtnDisabled]}>
-                  ‹
-                </Text>
-              </Pressable>
-              <Text style={[styles.timeValue, isDark && styles.textDark]}>
-                {String(notifHour).padStart(2, '0')}:00
-              </Text>
-              <Pressable
-                onPress={() => setNotifHour(h => Math.min(MAX_NOTIF_HOUR, h + 1))}
-                style={styles.timeBtn}
-                disabled={notifHour >= MAX_NOTIF_HOUR}
-              >
-                <Text style={[styles.timeBtnText, notifHour >= MAX_NOTIF_HOUR && styles.timeBtnDisabled]}>
-                  ›
-                </Text>
-              </Pressable>
-            </View>
+            <DateTimePicker
+              value={notifDate}
+              mode="time"
+              display="spinner"
+              onChange={(_: DateTimePickerEvent, date?: Date) => { if (date) setNotifDate(date) }}
+              textColor={isDark ? '#eee' : '#111'}
+              style={styles.dtPicker}
+            />
 
             <Pressable
               style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
@@ -211,38 +203,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 40,
   },
-  timePicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginBottom: 32,
-    gap: 4,
-  },
-  timePickerDark: {
-    backgroundColor: '#2a2a2a',
-  },
-  timeBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  timeBtnText: {
-    fontSize: 24,
-    color: '#f87171',
-    lineHeight: 24,
-    textAlignVertical: 'center',
-  },
-  timeBtnDisabled: {
-    color: '#ccc',
-  },
-  timeValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111',
-    minWidth: 72,
-    textAlign: 'center',
+  dtPicker: {
+    width: '100%',
+    height: 150,
+    marginBottom: 16,
   },
   primaryButton: {
     backgroundColor: '#f87171',

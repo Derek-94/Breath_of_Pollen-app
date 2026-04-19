@@ -191,6 +191,7 @@ const ja = {
     language: '言語',
     notification: '通知',
     notifToggle: '夕方の花粉アラート',
+    notifMorningToggle: '朝の花粉アラート',
     notifTime: '通知時刻',
     notifSaved: '✓ 保存しました',
     notifTest: '今すぐテスト通知を送る',

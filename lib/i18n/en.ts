@@ -191,6 +191,7 @@ const en = {
     language: 'Language',
     notification: 'Notifications',
     notifToggle: 'Evening pollen alert',
+    notifMorningToggle: 'Morning pollen alert',
     notifTime: 'Alert time',
     notifSaved: '✓ Saved',
     notifTest: 'Send test notification now',
