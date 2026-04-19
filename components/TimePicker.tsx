@@ -1,32 +1,40 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const ITEM_HEIGHT = 44
+const VISIBLE_ITEMS = 5
 
 interface ColumnProps {
   values: string[]
-  selectedIndex: number
+  initialIndex: number
   onSelect: (index: number) => void
   isDark: boolean
 }
 
-function Column({ values, selectedIndex, onSelect, isDark }: ColumnProps) {
+function Column({ values, initialIndex, onSelect, isDark }: ColumnProps) {
   const scrollRef = useRef<ScrollView>(null)
-  const isScrolling = useRef(false)
+  const [activeIndex, setActiveIndex] = useState(initialIndex)
+  const initialized = useRef(false)
 
-  const scrollToIndex = useCallback((index: number, animated = false) => {
-    scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated })
-  }, [])
+  useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true
+      // 첫 렌더 이후 스크롤 위치 설정
+      const timer = setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: initialIndex * ITEM_HEIGHT, animated: false })
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, []) // 마운트 시 1회만
 
   const handleScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y
-    const index = Math.round(y / ITEM_HEIGHT)
-    const clamped = Math.max(0, Math.min(values.length - 1, index))
-    scrollToIndex(clamped, true)
-    onSelect(clamped)
-    isScrolling.current = false
-  }, [values.length, onSelect, scrollToIndex])
+    const index = Math.max(0, Math.min(values.length - 1, Math.round(y / ITEM_HEIGHT)))
+    scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: true })
+    setActiveIndex(index)
+    onSelect(index)
+  }, [values.length, onSelect])
 
   return (
     <View style={styles.column}>
@@ -36,19 +44,18 @@ function Column({ values, selectedIndex, onSelect, isDark }: ColumnProps) {
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
-        onLayout={() => scrollToIndex(selectedIndex, false)}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
         contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
         style={styles.scroll}
+        scrollEventThrottle={16}
       >
         {values.map((val, i) => (
-          <View key={val} style={styles.item}>
+          <View key={i} style={styles.item}>
             <Text style={[
               styles.itemText,
-              isDark && styles.itemTextDark,
-              i === selectedIndex && styles.itemTextSelected,
-              i === selectedIndex && isDark && styles.itemTextSelectedDark,
+              isDark ? styles.itemTextDark : styles.itemTextLight,
+              i === activeIndex && (isDark ? styles.itemTextSelectedDark : styles.itemTextSelected),
             ]}>
               {val}
             </Text>
@@ -70,20 +77,32 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
 export function TimePicker({ hour, minute, onChange }: TimePickerProps) {
   const { isDark } = useTheme()
+  const hourRef = useRef(hour)
+  const minuteRef = useRef(minute)
+
+  const handleHourSelect = useCallback((i: number) => {
+    hourRef.current = i
+    onChange(i, minuteRef.current)
+  }, [onChange])
+
+  const handleMinuteSelect = useCallback((i: number) => {
+    minuteRef.current = i
+    onChange(hourRef.current, i)
+  }, [onChange])
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
       <Column
         values={HOURS}
-        selectedIndex={hour}
-        onSelect={(i) => onChange(i, minute)}
+        initialIndex={hour}
+        onSelect={handleHourSelect}
         isDark={isDark}
       />
       <Text style={[styles.colon, isDark && styles.colonDark]}>:</Text>
       <Column
         values={MINUTES}
-        selectedIndex={minute}
-        onSelect={(i) => onChange(hour, i)}
+        initialIndex={minute}
+        onSelect={handleMinuteSelect}
         isDark={isDark}
       />
     </View>
@@ -94,7 +113,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: ITEM_HEIGHT * 5,
+    height: ITEM_HEIGHT * VISIBLE_ITEMS,
     backgroundColor: '#f5f5f5',
     borderRadius: 16,
     overflow: 'hidden',
@@ -105,7 +124,8 @@ const styles = StyleSheet.create({
   },
   column: {
     flex: 1,
-    height: ITEM_HEIGHT * 5,
+    height: ITEM_HEIGHT * VISIBLE_ITEMS,
+    overflow: 'hidden',
   },
   scroll: {
     flex: 1,
@@ -128,18 +148,22 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 20,
-    color: '#bbb',
     fontWeight: '400',
+  },
+  itemTextLight: {
+    color: '#ccc',
   },
   itemTextDark: {
     color: '#555',
   },
   itemTextSelected: {
     fontSize: 22,
-    color: '#111',
     fontWeight: '700',
+    color: '#111',
   },
   itemTextSelectedDark: {
+    fontSize: 22,
+    fontWeight: '700',
     color: '#eee',
   },
   colon: {
