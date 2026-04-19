@@ -12,8 +12,12 @@ import {
   Alert,
   Linking,
   Modal,
+  Animated,
+  Dimensions,
 } from 'react-native'
-import { TimePicker } from '@/components/TimePicker'
+import DateTimePicker from '@react-native-community/datetimepicker'
+
+const SCREEN_HEIGHT = Dimensions.get('window').height
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Constants from 'expo-constants'
@@ -62,26 +66,23 @@ export default function SettingsScreen() {
   const [showPicker, setShowPicker] = useState(false)
 
   const [eveningEnabled, setEveningEnabled] = useState(false)
-  const [eveningHour, setEveningHour] = useState(DEFAULT_EVENING_HOUR)
-  const [eveningMinute, setEveningMinute] = useState(DEFAULT_EVENING_MINUTE)
+  const [eveningDate, setEveningDate] = useState(() => { const d = new Date(); d.setHours(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE, 0, 0); return d })
 
   const [morningEnabled, setMorningEnabled] = useState(false)
-  const [morningHour, setMorningHour] = useState(DEFAULT_MORNING_HOUR)
-  const [morningMinute, setMorningMinute] = useState(DEFAULT_MORNING_MINUTE)
+  const [morningDate, setMorningDate] = useState(() => { const d = new Date(); d.setHours(DEFAULT_MORNING_HOUR, DEFAULT_MORNING_MINUTE, 0, 0); return d })
 
   const [timeModalSlot, setTimeModalSlot] = useState<'evening' | 'morning' | null>(null)
-  const [modalHour, setModalHour] = useState(0)
-  const [modalMinute, setModalMinute] = useState(0)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [modalDate, setModalDate] = useState(new Date())
+  const backdropOpacity = useRef(new Animated.Value(0)).current
+  const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current
 
   useEffect(() => {
     getNotificationSettings().then(({ evening, morning }) => {
       setEveningEnabled(evening.enabled)
-      setEveningHour(evening.hour)
-      setEveningMinute(evening.minute)
+      const ed = new Date(); ed.setHours(evening.hour, evening.minute, 0, 0); setEveningDate(ed)
       setMorningEnabled(morning.enabled)
-      setMorningHour(morning.hour)
-      setMorningMinute(morning.minute)
+      const md = new Date(); md.setHours(morning.hour, morning.minute, 0, 0); setMorningDate(md)
     })
   }, [])
 
@@ -109,14 +110,14 @@ export default function SettingsScreen() {
       setEveningEnabled(true)
       const tomorrow = getTomorrowData()
       if (tomorrow) {
-        await schedulePollenAlert(tomorrow, eveningHour, i18n.language, eveningMinute)
+        await schedulePollenAlert(tomorrow, eveningDate.getHours(), i18n.language, eveningDate.getMinutes())
       }
     } else {
       await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false')
       await cancelPollenAlert()
       setEveningEnabled(false)
     }
-  }, [eveningHour, eveningMinute, i18n.language, t, getTomorrowData])
+  }, [eveningDate, i18n.language, t, getTomorrowData])
 
   const handleMorningToggle = useCallback(async (value: boolean) => {
     if (value) {
@@ -129,57 +130,56 @@ export default function SettingsScreen() {
       setMorningEnabled(true)
       const tomorrow = getTomorrowData()
       if (tomorrow) {
-        await scheduleMorningAlert(tomorrow, morningHour, morningMinute, i18n.language)
+        await scheduleMorningAlert(tomorrow, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
       }
     } else {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'false')
       await cancelMorningAlert()
       setMorningEnabled(false)
     }
-  }, [morningHour, morningMinute, i18n.language, t, getTomorrowData])
+  }, [morningDate, i18n.language, t, getTomorrowData])
 
   const openTimeModal = useCallback((slot: 'evening' | 'morning') => {
-    if (slot === 'evening') {
-      setModalHour(eveningHour)
-      setModalMinute(eveningMinute)
-    } else {
-      setModalHour(morningHour)
-      setModalMinute(morningMinute)
-    }
+    setModalDate(slot === 'evening' ? eveningDate : morningDate)
     setTimeModalSlot(slot)
-  }, [eveningHour, eveningMinute, morningHour, morningMinute])
+    setModalVisible(true)
+    backdropOpacity.setValue(0)
+    sheetTranslateY.setValue(SCREEN_HEIGHT)
+    Animated.parallel([
+      Animated.timing(backdropOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.spring(sheetTranslateY, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: true }),
+    ]).start()
+  }, [eveningDate, morningDate, backdropOpacity, sheetTranslateY])
 
-  const handleTimeConfirm = useCallback(async () => {
+  const closeTimeModal = useCallback((onDone?: () => void) => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(sheetTranslateY, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }),
+    ]).start(() => {
+      setModalVisible(false)
+      setTimeModalSlot(null)
+      onDone?.()
+    })
+  }, [backdropOpacity, sheetTranslateY])
+
+  const handleTimeConfirm = useCallback(() => {
     const slot = timeModalSlot
     if (!slot) return
-    setTimeModalSlot(null)
-
-    const h = modalHour
-    const m = modalMinute
+    const h = modalDate.getHours()
+    const m = modalDate.getMinutes()
     const tomorrow = getTomorrowData()
-
-    if (slot === 'evening') {
-      setEveningHour(h)
-      setEveningMinute(m)
-      await Promise.all([
-        AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)),
-        AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m)),
-      ])
-      if (eveningEnabled && tomorrow) {
-        await schedulePollenAlert(tomorrow, h, i18n.language, m)
+    closeTimeModal(async () => {
+      if (slot === 'evening') {
+        setEveningDate(modalDate)
+        await Promise.all([AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m))])
+        if (eveningEnabled && tomorrow) await schedulePollenAlert(tomorrow, h, i18n.language, m)
+      } else {
+        setMorningDate(modalDate)
+        await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
+        if (morningEnabled && tomorrow) await scheduleMorningAlert(tomorrow, h, m, i18n.language)
       }
-    } else {
-      setMorningHour(h)
-      setMorningMinute(m)
-      await Promise.all([
-        AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)),
-        AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m)),
-      ])
-      if (morningEnabled && tomorrow) {
-        await scheduleMorningAlert(tomorrow, h, m, i18n.language)
-      }
-    }
-  }, [timeModalSlot, modalHour, modalMinute, eveningEnabled, morningEnabled, i18n.language, getTomorrowData])
+    })
+  }, [timeModalSlot, modalDate, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, closeTimeModal])
 
   useFocusEffect(
     useCallback(() => {
@@ -257,56 +257,69 @@ export default function SettingsScreen() {
 
           <View style={styles.row}>
             <Text style={[styles.label, isDark && styles.textMuted]}>🌙 {t('settings.notifToggle')}</Text>
-            <Switch
-              value={eveningEnabled}
-              onValueChange={handleEveningToggle}
-              trackColor={{ false: '#ccc', true: '#f87171' }}
-              thumbColor="#fff"
-            />
+            <View style={styles.notifRight}>
+              {eveningEnabled && (
+                <Pressable onPress={() => openTimeModal('evening')}>
+                  <Text style={[styles.inlineTime, isDark && styles.tintDark]}>
+                    {String(eveningDate.getHours()).padStart(2, '0')}:{String(eveningDate.getMinutes()).padStart(2, '0')} ›
+                  </Text>
+                </Pressable>
+              )}
+              <Switch
+                value={eveningEnabled}
+                onValueChange={handleEveningToggle}
+                trackColor={{ false: '#ccc', true: '#f87171' }}
+                thumbColor="#fff"
+              />
+            </View>
           </View>
-          {eveningEnabled && (
-            <Pressable style={styles.timeRow} onPress={() => openTimeModal('evening')}>
-              <Text style={[styles.timeText, isDark && styles.tintDark]}>
-                {String(eveningHour).padStart(2, '0')}:{String(eveningMinute).padStart(2, '0')}
-              </Text>
-              <Text style={[styles.timeChevron, isDark && styles.tintDark]}>›</Text>
-            </Pressable>
-          )}
 
           <View style={[styles.divider, isDark && styles.dividerDark]} />
 
           <View style={[styles.row, styles.rowLast]}>
             <Text style={[styles.label, isDark && styles.textMuted]}>🌅 {t('settings.notifMorningToggle')}</Text>
-            <Switch
-              value={morningEnabled}
-              onValueChange={handleMorningToggle}
-              trackColor={{ false: '#ccc', true: '#f87171' }}
-              thumbColor="#fff"
-            />
+            <View style={styles.notifRight}>
+              {morningEnabled && (
+                <Pressable onPress={() => openTimeModal('morning')}>
+                  <Text style={[styles.inlineTime, isDark && styles.tintDark]}>
+                    {String(morningDate.getHours()).padStart(2, '0')}:{String(morningDate.getMinutes()).padStart(2, '0')} ›
+                  </Text>
+                </Pressable>
+              )}
+              <Switch
+                value={morningEnabled}
+                onValueChange={handleMorningToggle}
+                trackColor={{ false: '#ccc', true: '#f87171' }}
+                thumbColor="#fff"
+              />
+            </View>
           </View>
-          {morningEnabled && (
-            <Pressable style={styles.timeRow} onPress={() => openTimeModal('morning')}>
-              <Text style={[styles.timeText, isDark && styles.tintDark]}>
-                {String(morningHour).padStart(2, '0')}:{String(morningMinute).padStart(2, '0')}
-              </Text>
-              <Text style={[styles.timeChevron, isDark && styles.tintDark]}>›</Text>
-            </Pressable>
-          )}
         </View>
 
         {/* Time picker modal */}
-        <Modal visible={timeModalSlot !== null} transparent animationType="slide">
-          <Pressable style={styles.modalBackdrop} onPress={() => setTimeModalSlot(null)} />
-          <View style={[styles.modalSheet, isDark && styles.modalSheetDark]}>
+        <Modal visible={modalVisible} transparent animationType="none">
+          <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => closeTimeModal()} />
+          </Animated.View>
+          <Animated.View
+            style={[styles.modalSheet, isDark && styles.modalSheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
+          >
             <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t('settings.notifTime')}</Text>
-            <TimePicker hour={modalHour} minute={modalMinute} onChange={(h, m) => { setModalHour(h); setModalMinute(m) }} />
+            <View style={{ alignItems: 'center' }}>
+              <DateTimePicker
+                value={modalDate}
+                mode="time"
+                display="spinner"
+                onChange={(_, date) => { if (date) setModalDate(date) }}
+              />
+            </View>
             <Pressable
               style={({ pressed }) => [styles.modalConfirm, pressed && { opacity: 0.8 }]}
               onPress={handleTimeConfirm}
             >
               <Text style={styles.modalConfirmText}>{t('settings.notifSaved')}</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         </Modal>
 
         {/* Theme section */}
@@ -534,27 +547,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#f87171',
   },
-  timeRow: {
+  notifRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 8,
-    paddingLeft: 2,
-    gap: 4,
+    gap: 10,
   },
-  timeText: {
-    fontSize: 15,
+  inlineTime: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#f87171',
   },
-  timeChevron: {
-    fontSize: 18,
-    color: '#f87171',
-  },
   modalBackdrop: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   modalSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

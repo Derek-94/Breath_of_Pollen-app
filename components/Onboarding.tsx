@@ -8,8 +8,8 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { TimePicker } from '@/components/TimePicker'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -34,8 +34,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const { t } = useTranslation()
   const [page, setPage] = useState(0)
   const pageRef = useRef(0)
-  const [notifHour, setNotifHour] = useState(DEFAULT_EVENING_HOUR)
-  const [notifMinute, setNotifMinute] = useState(DEFAULT_EVENING_MINUTE)
+  const [notifDate, setNotifDate] = useState(() => {
+    const d = new Date(); d.setHours(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE, 0, 0); return d
+  })
   const slideAnim = useRef(new Animated.Value(0)).current
 
   const goToPage = (next: number) => {
@@ -77,8 +78,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       if (granted) {
         await AsyncStorage.multiSet([
           [NOTIF_ENABLED_KEY, 'true'],
-          [NOTIF_HOUR_KEY, String(notifHour)],
-          [NOTIF_MINUTE_KEY, String(notifMinute)],
+          [NOTIF_HOUR_KEY, String(notifDate.getHours())],
+          [NOTIF_MINUTE_KEY, String(notifDate.getMinutes())],
         ])
       }
     }
@@ -119,10 +120,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               {t('onboarding.notif.body')}
             </Text>
 
-            <TimePicker
-              hour={notifHour}
-              minute={notifMinute}
-              onChange={(h, m) => { setNotifHour(h); setNotifMinute(m) }}
+            <DateTimePicker
+              value={notifDate}
+              mode="time"
+              display="spinner"
+              onChange={(_, date) => { if (date) setNotifDate(date) }}
+              style={{ width: '100%' }}
             />
 
             <Pressable
