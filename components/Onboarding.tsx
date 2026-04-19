@@ -8,8 +8,8 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native'
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { TimePicker } from '@/components/TimePicker'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -24,11 +24,6 @@ import {
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 export const ONBOARDING_COMPLETE_KEY = 'onboarding_complete'
 
-function timeToDate(hour: number, minute: number): Date {
-  const d = new Date()
-  d.setHours(hour, minute, 0, 0)
-  return d
-}
 
 interface OnboardingProps {
   onComplete: () => void
@@ -39,7 +34,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const { t } = useTranslation()
   const [page, setPage] = useState(0)
   const pageRef = useRef(0)
-  const [notifDate, setNotifDate] = useState(timeToDate(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE))
+  const [notifHour, setNotifHour] = useState(DEFAULT_EVENING_HOUR)
+  const [notifMinute, setNotifMinute] = useState(DEFAULT_EVENING_MINUTE)
   const slideAnim = useRef(new Animated.Value(0)).current
 
   const goToPage = (next: number) => {
@@ -81,8 +77,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       if (granted) {
         await AsyncStorage.multiSet([
           [NOTIF_ENABLED_KEY, 'true'],
-          [NOTIF_HOUR_KEY, String(notifDate.getHours())],
-          [NOTIF_MINUTE_KEY, String(notifDate.getMinutes())],
+          [NOTIF_HOUR_KEY, String(notifHour)],
+          [NOTIF_MINUTE_KEY, String(notifMinute)],
         ])
       }
     }
@@ -123,13 +119,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               {t('onboarding.notif.body')}
             </Text>
 
-            <DateTimePicker
-              value={notifDate}
-              mode="time"
-              display="spinner"
-              onChange={(_: DateTimePickerEvent, date?: Date) => { if (date) setNotifDate(date) }}
-              textColor={isDark ? '#eee' : '#111'}
-              style={styles.dtPicker}
+            <TimePicker
+              hour={notifHour}
+              minute={notifMinute}
+              onChange={(h, m) => { setNotifHour(h); setNotifMinute(m) }}
             />
 
             <Pressable
@@ -202,11 +195,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 40,
-  },
-  dtPicker: {
-    width: '100%',
-    height: 150,
-    marginBottom: 16,
   },
   primaryButton: {
     backgroundColor: '#f87171',

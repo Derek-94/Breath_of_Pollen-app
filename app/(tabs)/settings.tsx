@@ -12,7 +12,7 @@ import {
   Alert,
   Linking,
 } from 'react-native'
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
+import { TimePicker } from '@/components/TimePicker'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Constants from 'expo-constants'
@@ -52,12 +52,6 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
   { value: 'dark', labelKey: 'settings.themeDark' },
 ]
 
-function timeToDate(hour: number, minute: number): Date {
-  const d = new Date()
-  d.setHours(hour, minute, 0, 0)
-  return d
-}
-
 export default function SettingsScreen() {
   const { isDark, themeMode, setThemeMode } = useTheme()
   const posthog = usePostHog()
@@ -67,10 +61,12 @@ export default function SettingsScreen() {
   const [showPicker, setShowPicker] = useState(false)
 
   const [eveningEnabled, setEveningEnabled] = useState(false)
-  const [eveningDate, setEveningDate] = useState(timeToDate(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE))
+  const [eveningHour, setEveningHour] = useState(DEFAULT_EVENING_HOUR)
+  const [eveningMinute, setEveningMinute] = useState(DEFAULT_EVENING_MINUTE)
 
   const [morningEnabled, setMorningEnabled] = useState(false)
-  const [morningDate, setMorningDate] = useState(timeToDate(DEFAULT_MORNING_HOUR, DEFAULT_MORNING_MINUTE))
+  const [morningHour, setMorningHour] = useState(DEFAULT_MORNING_HOUR)
+  const [morningMinute, setMorningMinute] = useState(DEFAULT_MORNING_MINUTE)
 
   const [savedSlot, setSavedSlot] = useState<'evening' | 'morning' | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -78,9 +74,11 @@ export default function SettingsScreen() {
   useEffect(() => {
     getNotificationSettings().then(({ evening, morning }) => {
       setEveningEnabled(evening.enabled)
-      setEveningDate(timeToDate(evening.hour, evening.minute))
+      setEveningHour(evening.hour)
+      setEveningMinute(evening.minute)
       setMorningEnabled(morning.enabled)
-      setMorningDate(timeToDate(morning.hour, morning.minute))
+      setMorningHour(morning.hour)
+      setMorningMinute(morning.minute)
     })
   }, [])
 
@@ -108,14 +106,14 @@ export default function SettingsScreen() {
       setEveningEnabled(true)
       const tomorrow = getTomorrowData()
       if (tomorrow) {
-        await schedulePollenAlert(tomorrow, eveningDate.getHours(), i18n.language, eveningDate.getMinutes())
+        await schedulePollenAlert(tomorrow, eveningHour, i18n.language, eveningMinute)
       }
     } else {
       await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false')
       await cancelPollenAlert()
       setEveningEnabled(false)
     }
-  }, [eveningDate, i18n.language, t, getTomorrowData])
+  }, [eveningHour, eveningMinute, i18n.language, t, getTomorrowData])
 
   const handleMorningToggle = useCallback(async (value: boolean) => {
     if (value) {
@@ -128,24 +126,22 @@ export default function SettingsScreen() {
       setMorningEnabled(true)
       const tomorrow = getTomorrowData()
       if (tomorrow) {
-        await scheduleMorningAlert(tomorrow, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
+        await scheduleMorningAlert(tomorrow, morningHour, morningMinute, i18n.language)
       }
     } else {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'false')
       await cancelMorningAlert()
       setMorningEnabled(false)
     }
-  }, [morningDate, i18n.language, t, getTomorrowData])
+  }, [morningHour, morningMinute, i18n.language, t, getTomorrowData])
 
-  const handleEveningTimeChange = useCallback((_: DateTimePickerEvent, date?: Date) => {
-    if (!date) return
-    setEveningDate(date)
+  const handleEveningTimeChange = useCallback((h: number, m: number) => {
+    setEveningHour(h)
+    setEveningMinute(m)
     setSavedSlot(null)
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
-      const h = date.getHours()
-      const m = date.getMinutes()
       await Promise.all([
         AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)),
         AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m)),
@@ -159,15 +155,13 @@ export default function SettingsScreen() {
     }, 800)
   }, [eveningEnabled, i18n.language, getTomorrowData])
 
-  const handleMorningTimeChange = useCallback((_: DateTimePickerEvent, date?: Date) => {
-    if (!date) return
-    setMorningDate(date)
+  const handleMorningTimeChange = useCallback((h: number, m: number) => {
+    setMorningHour(h)
+    setMorningMinute(m)
     setSavedSlot(null)
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
-      const h = date.getHours()
-      const m = date.getMinutes()
       await Promise.all([
         AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)),
         AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m)),
@@ -270,14 +264,7 @@ export default function SettingsScreen() {
               {savedSlot === 'evening' && (
                 <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
               )}
-              <DateTimePicker
-                value={eveningDate}
-                mode="time"
-                display="spinner"
-                onChange={handleEveningTimeChange}
-                textColor={isDark ? '#eee' : '#111'}
-                style={styles.dtPicker}
-              />
+              <TimePicker hour={eveningHour} minute={eveningMinute} onChange={handleEveningTimeChange} />
             </View>
           )}
 
@@ -298,14 +285,7 @@ export default function SettingsScreen() {
               {savedSlot === 'morning' && (
                 <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
               )}
-              <DateTimePicker
-                value={morningDate}
-                mode="time"
-                display="spinner"
-                onChange={handleMorningTimeChange}
-                textColor={isDark ? '#eee' : '#111'}
-                style={styles.dtPicker}
-              />
+              <TimePicker hour={morningHour} minute={morningMinute} onChange={handleMorningTimeChange} />
             </View>
           )}
         </View>
@@ -538,10 +518,6 @@ const styles = StyleSheet.create({
   timePickerWrap: {
     alignItems: 'center',
     marginTop: 4,
-  },
-  dtPicker: {
-    width: '100%',
-    height: 150,
   },
   savedText: {
     fontSize: 11,
