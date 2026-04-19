@@ -15,6 +15,8 @@ const en = {
     back: '← Back',
     autoDetect: 'Auto Detect',
     selectPrefecture: 'Select by prefecture',
+    locationPermission: 'Location permission is required',
+    locationFailed: 'Failed to get location',
   },
 
   pollen: {

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import * as ExpoLocation from 'expo-location'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import i18n from '@/lib/i18n'
 
 const SAVED_LOCATION_KEY = 'saved_location'
 
@@ -40,7 +41,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
       const { status } = await ExpoLocation.requestForegroundPermissionsAsync()
       if (status !== 'granted') {
-        setError('位置情報の許可が必要です')
+        setError(i18n.t('common.locationPermission'))
         setLoading(false)
         return
       }
@@ -51,7 +52,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         })
         setLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude })
       } catch {
-        setError('位置情報の取得に失敗しました')
+        setError(i18n.t('common.locationFailed'))
       } finally {
         setLoading(false)
       }
@@ -77,7 +78,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       })
       setLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude })
     } catch {
-      setError('位置情報の取得に失敗しました')
+      setError(i18n.t('common.locationFailed'))
     } finally {
       setLoading(false)
     }

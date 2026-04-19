@@ -5,7 +5,7 @@ import * as SplashScreen from 'expo-splash-screen'
 import * as Notifications from 'expo-notifications'
 import { StatusBar } from 'expo-status-bar'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { PostHogProvider } from 'posthog-react-native'
+import { PostHogProvider, usePostHog } from 'posthog-react-native'
 import { LocationProvider } from '@/contexts/LocationContext'
 import { WeatherDataProvider } from '@/contexts/WeatherDataContext'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
@@ -37,6 +37,7 @@ function InnerLayout() {
   const { isDark } = useTheme()
   const { t } = useTranslation()
   const router = useRouter()
+  const posthog = usePostHog()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
 
@@ -63,10 +64,11 @@ function InnerLayout() {
 
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      posthog.capture('notification_tapped')
       router.replace('/(tabs)')
     })
     return () => sub.remove()
-  }, [router])
+  }, [router, posthog])
 
   return (
     <>

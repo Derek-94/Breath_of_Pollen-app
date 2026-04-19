@@ -243,10 +243,14 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         getNotificationSettings().then(({ evening, morning }) => {
           const tomorrowData = { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella }
           if (evening.enabled) {
-            schedulePollenAlert(tomorrowData, evening.hour, i18n.language, evening.minute).catch(() => {})
+            schedulePollenAlert(tomorrowData, evening.hour, i18n.language, evening.minute)
+              .then(() => posthog.capture('notification_scheduled', { slot: 'evening', hour: evening.hour, pollen_level: tomorrow.pollenLevel }))
+              .catch((err) => posthog.capture('notification_schedule_failed', { slot: 'evening', error: err instanceof Error ? err.message : String(err) }))
           }
           if (morning.enabled) {
-            scheduleMorningAlert(tomorrowData, morning.hour, morning.minute, i18n.language).catch(() => {})
+            scheduleMorningAlert(tomorrowData, morning.hour, morning.minute, i18n.language)
+              .then(() => posthog.capture('notification_scheduled', { slot: 'morning', hour: morning.hour, pollen_level: tomorrow.pollenLevel }))
+              .catch((err) => posthog.capture('notification_schedule_failed', { slot: 'morning', error: err instanceof Error ? err.message : String(err) }))
           }
         }).catch(() => {})
       }

@@ -9,6 +9,8 @@ const ko = {
     back: '← 뒤로',
     autoDetect: '자동 감지',
     selectPrefecture: '도도부현에서 선택',
+    locationPermission: '위치 권한이 필요합니다',
+    locationFailed: '위치 정보를 가져오지 못했습니다',
   },
 
   tabs: {

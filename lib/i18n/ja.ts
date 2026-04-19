@@ -15,6 +15,8 @@ const ja = {
     back: '← 戻る',
     autoDetect: '自動検出',
     selectPrefecture: '都道府県から選ぶ',
+    locationPermission: '位置情報の許可が必要です',
+    locationFailed: '位置情報の取得に失敗しました',
   },
 
   pollen: {

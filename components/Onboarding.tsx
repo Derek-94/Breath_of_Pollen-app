@@ -11,6 +11,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useTranslation } from 'react-i18next'
+import { usePostHog } from 'posthog-react-native'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   requestNotificationPermission,
@@ -32,6 +33,7 @@ interface OnboardingProps {
 export function Onboarding({ onComplete }: OnboardingProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
+  const posthog = usePostHog()
   const [page, setPage] = useState(0)
   const pageRef = useRef(0)
   const [notifDate, setNotifDate] = useState(() => {
@@ -84,6 +86,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       }
     }
     await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true')
+    posthog.capture('onboarding_completed', {
+      notif_enabled: enableNotif,
+      notif_hour: enableNotif ? notifDate.getHours() : null,
+    })
     onComplete()
   }
 
@@ -124,6 +130,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               value={notifDate}
               mode="time"
               display="spinner"
+              themeVariant={isDark ? 'dark' : 'light'}
               onChange={(_, date) => { if (date) setNotifDate(date) }}
               style={{ width: '100%' }}
             />

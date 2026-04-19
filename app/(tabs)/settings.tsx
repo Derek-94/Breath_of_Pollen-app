@@ -108,6 +108,7 @@ export default function SettingsScreen() {
       }
       await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true')
       setEveningEnabled(true)
+      posthog.capture('notification_toggled', { slot: 'evening', enabled: true })
       const tomorrow = getTomorrowData()
       if (tomorrow) {
         await schedulePollenAlert(tomorrow, eveningDate.getHours(), i18n.language, eveningDate.getMinutes())
@@ -116,8 +117,9 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'false')
       await cancelPollenAlert()
       setEveningEnabled(false)
+      posthog.capture('notification_toggled', { slot: 'evening', enabled: false })
     }
-  }, [eveningDate, i18n.language, t, getTomorrowData])
+  }, [eveningDate, i18n.language, t, getTomorrowData, posthog])
 
   const handleMorningToggle = useCallback(async (value: boolean) => {
     if (value) {
@@ -128,6 +130,7 @@ export default function SettingsScreen() {
       }
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'true')
       setMorningEnabled(true)
+      posthog.capture('notification_toggled', { slot: 'morning', enabled: true })
       const tomorrow = getTomorrowData()
       if (tomorrow) {
         await scheduleMorningAlert(tomorrow, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
@@ -136,8 +139,9 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'false')
       await cancelMorningAlert()
       setMorningEnabled(false)
+      posthog.capture('notification_toggled', { slot: 'morning', enabled: false })
     }
-  }, [morningDate, i18n.language, t, getTomorrowData])
+  }, [morningDate, i18n.language, t, getTomorrowData, posthog])
 
   const openTimeModal = useCallback((slot: 'evening' | 'morning') => {
     setModalDate(slot === 'evening' ? eveningDate : morningDate)
@@ -173,13 +177,15 @@ export default function SettingsScreen() {
         setEveningDate(modalDate)
         await Promise.all([AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m))])
         if (eveningEnabled && tomorrow) await schedulePollenAlert(tomorrow, h, i18n.language, m)
+        posthog.capture('notification_hour_changed', { slot: 'evening', hour: h, minute: m })
       } else {
         setMorningDate(modalDate)
         await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
         if (morningEnabled && tomorrow) await scheduleMorningAlert(tomorrow, h, m, i18n.language)
+        posthog.capture('notification_hour_changed', { slot: 'morning', hour: h, minute: m })
       }
     })
-  }, [timeModalSlot, modalDate, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, closeTimeModal])
+  }, [timeModalSlot, modalDate, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, closeTimeModal, posthog])
 
   useFocusEffect(
     useCallback(() => {
@@ -310,6 +316,7 @@ export default function SettingsScreen() {
                 value={modalDate}
                 mode="time"
                 display="spinner"
+                themeVariant={isDark ? 'dark' : 'light'}
                 onChange={(_, date) => { if (date) setModalDate(date) }}
               />
             </View>

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { mapKMAGrade, type PollenLevel } from '@/lib/weather-utils'
 import { findNearestKRRegion, KOREA_REGIONS } from '@/lib/korea-coords'
+import i18n from '@/lib/i18n'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://breath-of-pollen.vercel.app'
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
@@ -55,7 +56,7 @@ export async function fetchWeather(lat: number, lon: number) {
   } catch {
     const cached = await getCached(cacheKey)
     if (cached) return cached
-    throw new Error('天気データの取得に失敗しました')
+    throw new Error(i18n.t('common.error'))
   }
 }
 
@@ -69,7 +70,7 @@ export async function fetchPollen(lat: number, lon: number) {
   } catch {
     const cached = await getCached(cacheKey)
     if (cached) return cached
-    throw new Error('花粉データの取得に失敗しました')
+    throw new Error(i18n.t('common.error'))
   }
 }
 
