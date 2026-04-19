@@ -11,6 +11,7 @@ import {
   Switch,
   Alert,
   Linking,
+  Modal,
 } from 'react-native'
 import { TimePicker } from '@/components/TimePicker'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -68,7 +69,9 @@ export default function SettingsScreen() {
   const [morningHour, setMorningHour] = useState(DEFAULT_MORNING_HOUR)
   const [morningMinute, setMorningMinute] = useState(DEFAULT_MORNING_MINUTE)
 
-  const [savedSlot, setSavedSlot] = useState<'evening' | 'morning' | null>(null)
+  const [timeModalSlot, setTimeModalSlot] = useState<'evening' | 'morning' | null>(null)
+  const [modalHour, setModalHour] = useState(0)
+  const [modalMinute, setModalMinute] = useState(0)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -135,45 +138,48 @@ export default function SettingsScreen() {
     }
   }, [morningHour, morningMinute, i18n.language, t, getTomorrowData])
 
-  const handleEveningTimeChange = useCallback((h: number, m: number) => {
-    setEveningHour(h)
-    setEveningMinute(m)
-    setSavedSlot(null)
+  const openTimeModal = useCallback((slot: 'evening' | 'morning') => {
+    if (slot === 'evening') {
+      setModalHour(eveningHour)
+      setModalMinute(eveningMinute)
+    } else {
+      setModalHour(morningHour)
+      setModalMinute(morningMinute)
+    }
+    setTimeModalSlot(slot)
+  }, [eveningHour, eveningMinute, morningHour, morningMinute])
 
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(async () => {
+  const handleTimeConfirm = useCallback(async () => {
+    const slot = timeModalSlot
+    if (!slot) return
+    setTimeModalSlot(null)
+
+    const h = modalHour
+    const m = modalMinute
+    const tomorrow = getTomorrowData()
+
+    if (slot === 'evening') {
+      setEveningHour(h)
+      setEveningMinute(m)
       await Promise.all([
         AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)),
         AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m)),
       ])
-      const tomorrow = getTomorrowData()
       if (eveningEnabled && tomorrow) {
         await schedulePollenAlert(tomorrow, h, i18n.language, m)
       }
-      setSavedSlot('evening')
-      setTimeout(() => setSavedSlot(null), 1500)
-    }, 800)
-  }, [eveningEnabled, i18n.language, getTomorrowData])
-
-  const handleMorningTimeChange = useCallback((h: number, m: number) => {
-    setMorningHour(h)
-    setMorningMinute(m)
-    setSavedSlot(null)
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(async () => {
+    } else {
+      setMorningHour(h)
+      setMorningMinute(m)
       await Promise.all([
         AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)),
         AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m)),
       ])
-      const tomorrow = getTomorrowData()
       if (morningEnabled && tomorrow) {
         await scheduleMorningAlert(tomorrow, h, m, i18n.language)
       }
-      setSavedSlot('morning')
-      setTimeout(() => setSavedSlot(null), 1500)
-    }, 800)
-  }, [morningEnabled, i18n.language, getTomorrowData])
+    }
+  }, [timeModalSlot, modalHour, modalMinute, eveningEnabled, morningEnabled, i18n.language, getTomorrowData])
 
   useFocusEffect(
     useCallback(() => {
@@ -249,7 +255,6 @@ export default function SettingsScreen() {
         <View style={[styles.card, isDark && styles.cardDark]}>
           <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.notification')}</Text>
 
-          {/* Evening */}
           <View style={styles.row}>
             <Text style={[styles.label, isDark && styles.textMuted]}>🌙 {t('settings.notifToggle')}</Text>
             <Switch
@@ -260,17 +265,16 @@ export default function SettingsScreen() {
             />
           </View>
           {eveningEnabled && (
-            <View style={styles.timePickerWrap}>
-              {savedSlot === 'evening' && (
-                <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
-              )}
-              <TimePicker hour={eveningHour} minute={eveningMinute} onChange={handleEveningTimeChange} />
-            </View>
+            <Pressable style={styles.timeRow} onPress={() => openTimeModal('evening')}>
+              <Text style={[styles.timeText, isDark && styles.tintDark]}>
+                {String(eveningHour).padStart(2, '0')}:{String(eveningMinute).padStart(2, '0')}
+              </Text>
+              <Text style={[styles.timeChevron, isDark && styles.tintDark]}>›</Text>
+            </Pressable>
           )}
 
           <View style={[styles.divider, isDark && styles.dividerDark]} />
 
-          {/* Morning */}
           <View style={[styles.row, styles.rowLast]}>
             <Text style={[styles.label, isDark && styles.textMuted]}>🌅 {t('settings.notifMorningToggle')}</Text>
             <Switch
@@ -281,14 +285,29 @@ export default function SettingsScreen() {
             />
           </View>
           {morningEnabled && (
-            <View style={styles.timePickerWrap}>
-              {savedSlot === 'morning' && (
-                <Text style={styles.savedText}>{t('settings.notifSaved')}</Text>
-              )}
-              <TimePicker hour={morningHour} minute={morningMinute} onChange={handleMorningTimeChange} />
-            </View>
+            <Pressable style={styles.timeRow} onPress={() => openTimeModal('morning')}>
+              <Text style={[styles.timeText, isDark && styles.tintDark]}>
+                {String(morningHour).padStart(2, '0')}:{String(morningMinute).padStart(2, '0')}
+              </Text>
+              <Text style={[styles.timeChevron, isDark && styles.tintDark]}>›</Text>
+            </Pressable>
           )}
         </View>
+
+        {/* Time picker modal */}
+        <Modal visible={timeModalSlot !== null} transparent animationType="slide">
+          <Pressable style={styles.modalBackdrop} onPress={() => setTimeModalSlot(null)} />
+          <View style={[styles.modalSheet, isDark && styles.modalSheetDark]}>
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t('settings.notifTime')}</Text>
+            <TimePicker hour={modalHour} minute={modalMinute} onChange={(h, m) => { setModalHour(h); setModalMinute(m) }} />
+            <Pressable
+              style={({ pressed }) => [styles.modalConfirm, pressed && { opacity: 0.8 }]}
+              onPress={handleTimeConfirm}
+            >
+              <Text style={styles.modalConfirmText}>{t('settings.notifSaved')}</Text>
+            </Pressable>
+          </View>
+        </Modal>
 
         {/* Theme section */}
         <View style={[styles.card, isDark && styles.cardDark]}>
@@ -515,14 +534,54 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#f87171',
   },
-  timePickerWrap: {
+  timeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    paddingBottom: 8,
+    paddingLeft: 2,
+    gap: 4,
   },
-  savedText: {
-    fontSize: 11,
-    color: '#4ade80',
-    marginBottom: 4,
+  timeText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#f87171',
+  },
+  timeChevron: {
+    fontSize: 18,
+    color: '#f87171',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  modalSheetDark: {
+    backgroundColor: '#1e1e1e',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+    textAlign: 'center',
+  },
+  modalConfirm: {
+    backgroundColor: '#f87171',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalConfirmText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   tintDark: {
     color: '#fb923c',
