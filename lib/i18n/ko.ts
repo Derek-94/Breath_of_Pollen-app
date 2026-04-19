@@ -238,8 +238,8 @@ const ko = {
     title: '새로운 기능 🎉',
     confirm: '확인',
     v110: {
-      notif: { title: '꽃가루 알림', desc: '저녁에 내일 꽃가루 정보를 알려드려요' },
-      onboarding: { title: '온보딩 화면', desc: '앱 첫 실행 시 소개 및 알림 설정 안내' },
+      notif: { title: '꽃가루 알림', desc: '아침·저녁 두 번, 분 단위로 알림 시간을 설정할 수 있어요' },
+      onboarding: { title: '온보딩 화면', desc: '첫 실행 시 앱 소개 및 알림 설정 안내' },
     },
   },
 

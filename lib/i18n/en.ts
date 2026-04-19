@@ -238,8 +238,8 @@ const en = {
     title: "What's New 🎉",
     confirm: 'Got it',
     v110: {
-      notif: { title: 'Pollen Alert', desc: 'Get tomorrow\'s pollen forecast every evening' },
-      onboarding: { title: 'Onboarding Screen', desc: 'App intro and notification setup on first launch' },
+      notif: { title: 'Pollen Alerts', desc: 'Set morning & evening reminders with minute-level precision' },
+      onboarding: { title: 'Onboarding', desc: 'Guided intro and notification setup on first launch' },
     },
   },
 
