@@ -145,10 +145,7 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'true')
       setMorningEnabled(true)
       posthog.capture('notification_toggled', { slot: 'morning', enabled: true })
-      const today = getTodayData()
-      if (today) {
-        await scheduleMorningAlert(today, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
-      }
+      await scheduleMorningAlert(getTodayData(), morningDate.getHours(), morningDate.getMinutes(), i18n.language)
     } else {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'false')
       await cancelMorningAlert()
@@ -195,8 +192,7 @@ export default function SettingsScreen() {
       } else {
         setMorningDate(modalDate)
         await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
-        const today = getTodayData()
-        if (morningEnabled && today) await scheduleMorningAlert(today, h, m, i18n.language)
+        if (morningEnabled) await scheduleMorningAlert(getTodayData(), h, m, i18n.language)
         posthog.capture('notification_hour_changed', { slot: 'morning', hour: h, minute: m })
       }
     })

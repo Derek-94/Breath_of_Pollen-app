@@ -118,6 +118,13 @@ function dateAt(hour: number, minute: number, daysFromNow: number): Date {
   return d
 }
 
+function startOffset(hour: number, minute: number): number {
+  const now = new Date()
+  const target = new Date()
+  target.setHours(hour, minute, 0, 0)
+  return now < target ? 0 : 1
+}
+
 async function cancelStoredNotifs(idsKey: string, legacyKey: string): Promise<void> {
   const legacyId = await AsyncStorage.getItem(legacyKey)
   if (legacyId) {
@@ -134,7 +141,7 @@ async function cancelStoredNotifs(idsKey: string, legacyKey: string): Promise<vo
 async function scheduleAlerts(
   idsKey: string,
   legacyKey: string,
-  data: TomorrowData,
+  data: TomorrowData | null,
   hour: number,
   minute: number,
   language: string,
@@ -143,20 +150,24 @@ async function scheduleAlerts(
   await cancelStoredNotifs(idsKey, legacyKey)
   const lang = getLang(language)
   const ids: string[] = []
+  const offset = startOffset(hour, minute)
+  const fallbackTitle = FALLBACK_TITLES[lang] ?? FALLBACK_TITLES.en
+  const fallbackBody = FALLBACK_BODIES[lang] ?? FALLBACK_BODIES.en
 
-  // Day 1: 실제 데이터
-  const { title, body } = buildContent(data, language, titles)
+  // 데이터 있으면 실데이터, 없으면 바로 fallback
+  const firstContent = data
+    ? buildContent(data, language, titles)
+    : { title: fallbackTitle, body: fallbackBody }
+
   ids.push(
     await Notifications.scheduleNotificationAsync({
-      content: { title, body, sound: true },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: dateAt(hour, minute, 1) },
+      content: { ...firstContent, sound: true },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: dateAt(hour, minute, offset) },
     })
   )
 
-  // Day 2~7: fallback ("앱 열어서 확인해봐!")
-  const fallbackTitle = FALLBACK_TITLES[lang] ?? FALLBACK_TITLES.en
-  const fallbackBody = FALLBACK_BODIES[lang] ?? FALLBACK_BODIES.en
-  for (let i = 2; i <= 7; i++) {
+  // 그 다음날부터 6일간 fallback
+  for (let i = offset + 1; i <= offset + 6; i++) {
     ids.push(
       await Notifications.scheduleNotificationAsync({
         content: { title: fallbackTitle, body: fallbackBody, sound: true },
@@ -211,7 +222,7 @@ export async function getNotificationSettings(): Promise<{
 }
 
 export async function schedulePollenAlert(
-  tomorrow: TomorrowData,
+  tomorrow: TomorrowData | null,
   hour: number,
   language: string,
   minute = 0,
@@ -220,7 +231,7 @@ export async function schedulePollenAlert(
 }
 
 export async function scheduleMorningAlert(
-  today: TodayData,
+  today: TodayData | null,
   hour: number,
   minute: number,
   language: string,
