@@ -239,17 +239,19 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
       posthog.register({ location: resolvedLocation, country })
 
       const tomorrow = weeklyForecast[1]
-      if (tomorrow) {
+      const today = weeklyForecast[0]
+      if (tomorrow || today) {
         getNotificationSettings().then(({ evening, morning }) => {
-          const tomorrowData = { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella }
-          if (evening.enabled) {
+          if (evening.enabled && tomorrow) {
+            const tomorrowData = { pollenLevel: tomorrow.pollenLevel, pollenUnknown: tomorrow.pollenUnknown, icon: tomorrow.icon, high: tomorrow.high, low: tomorrow.low, needsUmbrella: tomorrow.needsUmbrella }
             schedulePollenAlert(tomorrowData, evening.hour, i18n.language, evening.minute)
               .then(() => posthog.capture('notification_scheduled', { slot: 'evening', hour: evening.hour, pollen_level: tomorrow.pollenLevel }))
               .catch((err) => posthog.capture('notification_schedule_failed', { slot: 'evening', error: err instanceof Error ? err.message : String(err) }))
           }
-          if (morning.enabled) {
-            scheduleMorningAlert(tomorrowData, morning.hour, morning.minute, i18n.language)
-              .then(() => posthog.capture('notification_scheduled', { slot: 'morning', hour: morning.hour, pollen_level: tomorrow.pollenLevel }))
+          if (morning.enabled && today) {
+            const todayData = { pollenLevel: overallLevel, pollenUnknown: country !== 'JP' && country !== 'KR', icon: weatherInfo.emoji, high: todayHigh, low: todayLow, needsUmbrella: needsUmbrellaToday(dailyCode) }
+            scheduleMorningAlert(todayData, morning.hour, morning.minute, i18n.language)
+              .then(() => posthog.capture('notification_scheduled', { slot: 'morning', hour: morning.hour, pollen_level: overallLevel }))
               .catch((err) => posthog.capture('notification_schedule_failed', { slot: 'morning', error: err instanceof Error ? err.message : String(err) }))
           }
         }).catch(() => {})

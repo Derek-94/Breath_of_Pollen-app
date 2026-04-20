@@ -6,13 +6,11 @@ import type { PollenLevel } from '@/lib/weather-utils'
 export const NOTIF_ENABLED_KEY = 'notif_enabled'
 export const NOTIF_HOUR_KEY = 'notif_hour'
 export const NOTIF_MINUTE_KEY = 'notif_minute'
-export const NOTIF_ID_KEY = 'notif_alert_id'
 
 // Morning (신규)
 export const NOTIF_MORNING_ENABLED_KEY = 'notif_morning_enabled'
 export const NOTIF_MORNING_HOUR_KEY = 'notif_morning_hour'
 export const NOTIF_MORNING_MINUTE_KEY = 'notif_morning_minute'
-export const NOTIF_MORNING_ID_KEY = 'notif_morning_alert_id'
 
 export const DEFAULT_EVENING_HOUR = 21
 export const DEFAULT_EVENING_MINUTE = 0
@@ -24,6 +22,13 @@ export const DEFAULT_NOTIF_HOUR = DEFAULT_EVENING_HOUR
 export const MIN_NOTIF_HOUR = 17
 export const MAX_NOTIF_HOUR = 23
 
+// IDs 저장 키 (JSON 배열, 복수 알림)
+const NOTIF_IDS_KEY = 'notif_alert_ids'
+const NOTIF_MORNING_IDS_KEY = 'notif_morning_alert_ids'
+// 마이그레이션용 구버전 키
+const NOTIF_ID_LEGACY_KEY = 'notif_alert_id'
+const NOTIF_MORNING_ID_LEGACY_KEY = 'notif_morning_alert_id'
+
 export type TomorrowData = {
   pollenLevel: PollenLevel
   pollenUnknown: boolean
@@ -33,7 +38,9 @@ export type TomorrowData = {
   needsUmbrella: boolean
 }
 
-const TITLES: Record<string, (level: PollenLevel, unknown: boolean) => string> = {
+export type TodayData = TomorrowData
+
+const EVENING_TITLES: Record<string, (level: PollenLevel, unknown: boolean) => string> = {
   ko: (level, unknown) => {
     if (unknown) return '내일의 날씨 예보 🌤️'
     if (level <= 2) return '내일 꽃가루 적어요 ✨'
@@ -54,17 +61,111 @@ const TITLES: Record<string, (level: PollenLevel, unknown: boolean) => string> =
   },
 }
 
+const MORNING_TITLES: Record<string, (level: PollenLevel, unknown: boolean) => string> = {
+  ko: (level, unknown) => {
+    if (unknown) return '오늘의 날씨 🌤️'
+    if (level <= 2) return '오늘 꽃가루 적어요 ✨'
+    if (level === 3) return '오늘 꽃가루 많아요 🌿'
+    return '오늘 꽃가루 주의! ⚠️'
+  },
+  ja: (level, unknown) => {
+    if (unknown) return '今日の天気 🌤️'
+    if (level <= 2) return '今日の花粉は少なめです ✨'
+    if (level === 3) return '今日の花粉が多めです 🌿'
+    return '今日の花粉に注意！⚠️'
+  },
+  en: (level, unknown) => {
+    if (unknown) return "Today's weather 🌤️"
+    if (level <= 2) return 'Low pollen today ✨'
+    if (level === 3) return 'High pollen today 🌿'
+    return 'Pollen alert today ⚠️'
+  },
+}
+
+const FALLBACK_TITLES: Record<string, string> = {
+  ko: '오늘 날씨 확인해보세요! 🌿',
+  ja: '今日の天気をご確認ください 🌿',
+  en: "Check today's weather! 🌿",
+}
+
+const FALLBACK_BODIES: Record<string, string> = {
+  ko: '앱을 열어서 오늘의 꽃가루와 날씨를 확인하세요.',
+  ja: 'アプリを開いて今日の花粉・天気を確認しましょう。',
+  en: 'Open the app to check today\'s pollen and weather.',
+}
+
 const BODIES: Record<string, (d: TomorrowData) => string> = {
   ko: (d) => `${d.icon} 최고 ${d.high}° / 최저 ${d.low}°${d.needsUmbrella ? ' · ☂️ 우산 챙기세요!' : '.'}`,
   ja: (d) => `${d.icon} 最高 ${d.high}° / 最低 ${d.low}°${d.needsUmbrella ? ' · ☂️ 傘をお忘れなく！' : '。'}`,
   en: (d) => `${d.icon} High ${d.high}° / Low ${d.low}°${d.needsUmbrella ? ' · ☂️ Bring an umbrella!' : '.'}`,
 }
 
-function buildContent(tomorrow: TomorrowData, language: string) {
-  const lang = language.startsWith('ko') ? 'ko' : language.startsWith('ja') ? 'ja' : 'en'
-  const title = (TITLES[lang] ?? TITLES.en)(tomorrow.pollenLevel, tomorrow.pollenUnknown)
-  const body = (BODIES[lang] ?? BODIES.en)(tomorrow)
+function getLang(language: string): string {
+  return language.startsWith('ko') ? 'ko' : language.startsWith('ja') ? 'ja' : 'en'
+}
+
+function buildContent(data: TomorrowData, language: string, titles: typeof EVENING_TITLES) {
+  const lang = getLang(language)
+  const title = (titles[lang] ?? titles.en)(data.pollenLevel, data.pollenUnknown)
+  const body = (BODIES[lang] ?? BODIES.en)(data)
   return { title, body }
+}
+
+function dateAt(hour: number, minute: number, daysFromNow: number): Date {
+  const d = new Date()
+  d.setDate(d.getDate() + daysFromNow)
+  d.setHours(hour, minute, 0, 0)
+  return d
+}
+
+async function cancelStoredNotifs(idsKey: string, legacyKey: string): Promise<void> {
+  const legacyId = await AsyncStorage.getItem(legacyKey)
+  if (legacyId) {
+    await Notifications.cancelScheduledNotificationAsync(legacyId).catch(() => {})
+    await AsyncStorage.removeItem(legacyKey)
+  }
+  const raw = await AsyncStorage.getItem(idsKey)
+  if (!raw) return
+  const ids: string[] = JSON.parse(raw)
+  await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})))
+  await AsyncStorage.removeItem(idsKey)
+}
+
+async function scheduleAlerts(
+  idsKey: string,
+  legacyKey: string,
+  data: TomorrowData,
+  hour: number,
+  minute: number,
+  language: string,
+  titles: typeof EVENING_TITLES,
+): Promise<void> {
+  await cancelStoredNotifs(idsKey, legacyKey)
+  const lang = getLang(language)
+  const ids: string[] = []
+
+  // Day 1: 실제 데이터
+  const { title, body } = buildContent(data, language, titles)
+  ids.push(
+    await Notifications.scheduleNotificationAsync({
+      content: { title, body, sound: true },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: dateAt(hour, minute, 1) },
+    })
+  )
+
+  // Day 2~7: fallback ("앱 열어서 확인해봐!")
+  const fallbackTitle = FALLBACK_TITLES[lang] ?? FALLBACK_TITLES.en
+  const fallbackBody = FALLBACK_BODIES[lang] ?? FALLBACK_BODIES.en
+  for (let i = 2; i <= 7; i++) {
+    ids.push(
+      await Notifications.scheduleNotificationAsync({
+        content: { title: fallbackTitle, body: fallbackBody, sound: true },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: dateAt(hour, minute, i) },
+      })
+    )
+  }
+
+  await AsyncStorage.setItem(idsKey, JSON.stringify(ids))
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -109,73 +210,68 @@ export async function getNotificationSettings(): Promise<{
   }
 }
 
-async function scheduleNotif(
-  idKey: string,
-  tomorrow: TomorrowData,
-  hour: number,
-  minute: number,
-  language: string,
-): Promise<void> {
-  const existingId = await AsyncStorage.getItem(idKey)
-  if (existingId) {
-    await Notifications.cancelScheduledNotificationAsync(existingId).catch(() => {})
-  }
-  const { title, body } = buildContent(tomorrow, language)
-  const id = await Notifications.scheduleNotificationAsync({
-    content: { title, body, sound: true },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
-  })
-  await AsyncStorage.setItem(idKey, id)
-}
-
-async function cancelNotif(idKey: string): Promise<void> {
-  const id = await AsyncStorage.getItem(idKey)
-  if (id) {
-    await Notifications.cancelScheduledNotificationAsync(id).catch(() => {})
-    await AsyncStorage.removeItem(idKey)
-  }
-}
-
 export async function schedulePollenAlert(
   tomorrow: TomorrowData,
   hour: number,
   language: string,
   minute = 0,
 ): Promise<void> {
-  await scheduleNotif(NOTIF_ID_KEY, tomorrow, hour, minute, language)
+  await scheduleAlerts(NOTIF_IDS_KEY, NOTIF_ID_LEGACY_KEY, tomorrow, hour, minute, language, EVENING_TITLES)
 }
 
 export async function scheduleMorningAlert(
-  tomorrow: TomorrowData,
+  today: TodayData,
   hour: number,
   minute: number,
   language: string,
 ): Promise<void> {
-  await scheduleNotif(NOTIF_MORNING_ID_KEY, tomorrow, hour, minute, language)
+  await scheduleAlerts(NOTIF_MORNING_IDS_KEY, NOTIF_MORNING_ID_LEGACY_KEY, today, hour, minute, language, MORNING_TITLES)
 }
 
 export async function cancelPollenAlert(): Promise<void> {
-  await cancelNotif(NOTIF_ID_KEY)
+  await cancelStoredNotifs(NOTIF_IDS_KEY, NOTIF_ID_LEGACY_KEY)
 }
 
 export async function cancelMorningAlert(): Promise<void> {
-  await cancelNotif(NOTIF_MORNING_ID_KEY)
+  await cancelStoredNotifs(NOTIF_MORNING_IDS_KEY, NOTIF_MORNING_ID_LEGACY_KEY)
 }
 
 export async function sendTestNotification(
   tomorrow: TomorrowData,
   language: string,
 ): Promise<void> {
-  const { title, body } = buildContent(tomorrow, language)
+  const { title, body } = buildContent(tomorrow, language, EVENING_TITLES)
   await Notifications.scheduleNotificationAsync({
     content: { title, body, sound: true },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: 5,
     },
+  })
+}
+
+// 테스트 전용: 실데이터 알람(30초 후) + fallback 알람(60초 후) 스케줄
+export async function sendFallbackTest(
+  data: TomorrowData,
+  language: string,
+  titles: typeof EVENING_TITLES = EVENING_TITLES,
+): Promise<void> {
+  const lang = getLang(language)
+  const { title, body } = buildContent(data, language, titles)
+
+  // 30초 후 - 실데이터
+  await Notifications.scheduleNotificationAsync({
+    content: { title, body, sound: true },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 30 },
+  })
+
+  // 60초 후 - fallback
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: FALLBACK_TITLES[lang] ?? FALLBACK_TITLES.en,
+      body: FALLBACK_BODIES[lang] ?? FALLBACK_BODIES.en,
+      sound: true,
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 60 },
   })
 }

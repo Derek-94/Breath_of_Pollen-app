@@ -39,6 +39,7 @@ import {
   scheduleMorningAlert,
   cancelMorningAlert,
   getNotificationSettings,
+  sendFallbackTest,
   NOTIF_ENABLED_KEY,
   NOTIF_HOUR_KEY,
   NOTIF_MINUTE_KEY,
@@ -99,6 +100,19 @@ export default function SettingsScreen() {
     }
   }, [data])
 
+  const getTodayData = useCallback(() => {
+    const today = data?.weeklyForecast[0]
+    if (!today) return null
+    return {
+      pollenLevel: today.pollenLevel,
+      pollenUnknown: today.pollenUnknown,
+      icon: today.icon,
+      high: today.high,
+      low: today.low,
+      needsUmbrella: today.needsUmbrella,
+    }
+  }, [data])
+
   const handleEveningToggle = useCallback(async (value: boolean) => {
     if (value) {
       const granted = await requestNotificationPermission()
@@ -131,9 +145,9 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'true')
       setMorningEnabled(true)
       posthog.capture('notification_toggled', { slot: 'morning', enabled: true })
-      const tomorrow = getTomorrowData()
-      if (tomorrow) {
-        await scheduleMorningAlert(tomorrow, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
+      const today = getTodayData()
+      if (today) {
+        await scheduleMorningAlert(today, morningDate.getHours(), morningDate.getMinutes(), i18n.language)
       }
     } else {
       await AsyncStorage.setItem(NOTIF_MORNING_ENABLED_KEY, 'false')
@@ -141,7 +155,7 @@ export default function SettingsScreen() {
       setMorningEnabled(false)
       posthog.capture('notification_toggled', { slot: 'morning', enabled: false })
     }
-  }, [morningDate, i18n.language, t, getTomorrowData, posthog])
+  }, [morningDate, i18n.language, t, getTodayData, posthog])
 
   const openTimeModal = useCallback((slot: 'evening' | 'morning') => {
     setModalDate(slot === 'evening' ? eveningDate : morningDate)
@@ -181,11 +195,12 @@ export default function SettingsScreen() {
       } else {
         setMorningDate(modalDate)
         await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
-        if (morningEnabled && tomorrow) await scheduleMorningAlert(tomorrow, h, m, i18n.language)
+        const today = getTodayData()
+        if (morningEnabled && today) await scheduleMorningAlert(today, h, m, i18n.language)
         posthog.capture('notification_hour_changed', { slot: 'morning', hour: h, minute: m })
       }
     })
-  }, [timeModalSlot, modalDate, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, closeTimeModal, posthog])
+  }, [timeModalSlot, modalDate, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, getTodayData, closeTimeModal, posthog])
 
   useFocusEffect(
     useCallback(() => {
@@ -301,6 +316,24 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+
+        {/* 알림 fallback 테스트 버튼 (개발용) */}
+        {__DEV__ && (
+          <View style={[styles.card, isDark && styles.cardDark]}>
+            <Text style={[styles.sectionTitle, isDark && styles.textDark]}>🧪 알림 테스트 (DEV)</Text>
+            <Pressable
+              style={({ pressed }) => [styles.button, { backgroundColor: '#6366f1' }, pressed && styles.buttonPressed]}
+              onPress={async () => {
+                const today = getTodayData()
+                if (!today) { Alert.alert('데이터 없음'); return }
+                await sendFallbackTest(today, i18n.language)
+                Alert.alert('테스트 알림 예약됨', '30초 후: 실데이터\n60초 후: fallback ("확인해봐!")')
+              }}
+            >
+              <Text style={styles.buttonText}>fallback 알림 테스트</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Time picker modal */}
         <Modal visible={modalVisible} transparent animationType="none">
