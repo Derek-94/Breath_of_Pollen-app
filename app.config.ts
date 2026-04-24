@@ -55,5 +55,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://breath-of-pollen.vercel.app',
+    eas: {
+      projectId: '5b162a73-40b9-40c2-888f-21e4adb2386a',
+    },
   },
 })
