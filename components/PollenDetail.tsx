@@ -8,10 +8,12 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Platform,
   type GestureResponderEvent,
   type PanResponderGestureState,
 } from 'react-native'
 import { useRef, useEffect } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { type PollenLevel, getPollenColor, POLLEN_LABEL_KEYS } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -111,6 +113,7 @@ function PollenLegend({ isDark }: { isDark: boolean }) {
 export function PollenDetail({ plants, overallLevel, weeklyForecast, country, onClose }: PollenDetailProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
 
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const sheetTranslateY = useRef(new Animated.Value(SHEET_MAX)).current
@@ -169,7 +172,8 @@ export function PollenDetail({ plants, overallLevel, weeklyForecast, country, on
         </Animated.View>
 
         <Animated.View
-          style={[styles.sheet, isDark && styles.sheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
+          collapsable={false}
+          style={[styles.sheet, isDark && styles.sheetDark, { transform: [{ translateY: sheetTranslateY }], paddingBottom: Platform.OS === 'android' ? insets.bottom + 20 : 20 }]}
         >
           <View style={styles.handleZone} {...panResponder.panHandlers}>
             <View style={[styles.handle, isDark && styles.handleDark]} />

@@ -8,10 +8,12 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Platform,
   type GestureResponderEvent,
   type PanResponderGestureState,
 } from 'react-native'
 import { useRef, useEffect } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { type OutfitItem, type PollenLevel, type LaundryStatus, POLLEN_LABEL_KEYS, getPollenColor } from '@/lib/weather-utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -32,6 +34,7 @@ interface OutfitDetailProps {
 export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, laundryStatus, onClose }: OutfitDetailProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const sheetTranslateY = useRef(new Animated.Value(SHEET_MAX)).current
 
@@ -113,10 +116,11 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
         </Animated.View>
 
         <Animated.View
+          collapsable={false}
           style={[
             styles.sheet,
             isDark && styles.sheetDark,
-            { transform: [{ translateY: sheetTranslateY }] },
+            { transform: [{ translateY: sheetTranslateY }], paddingBottom: Platform.OS === 'android' ? insets.bottom + 20 : 20 },
           ]}
         >
           <View style={styles.handleZone} {...panResponder.panHandlers}>

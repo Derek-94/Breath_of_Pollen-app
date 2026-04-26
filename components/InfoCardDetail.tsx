@@ -7,10 +7,12 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Platform,
   type GestureResponderEvent,
   type PanResponderGestureState,
 } from 'react-native'
 import { useRef, useEffect } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -45,6 +47,7 @@ interface InfoCardDetailProps {
 export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardDetailProps) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
 
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const sheetTranslateY = useRef(new Animated.Value(SHEET_MAX)).current
@@ -111,7 +114,8 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
         </Animated.View>
 
         <Animated.View
-          style={[styles.sheet, isDark && styles.sheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
+          collapsable={false}
+          style={[styles.sheet, isDark && styles.sheetDark, { transform: [{ translateY: sheetTranslateY }], paddingBottom: Platform.OS === 'android' ? insets.bottom + 20 : 20 }]}
         >
           <View style={styles.handleZone} {...panResponder.panHandlers}>
             <View style={styles.handle} />

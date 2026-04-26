@@ -8,7 +8,6 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native'
-import DateTimePicker from '@react-native-community/datetimepicker'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useTranslation } from 'react-i18next'
 import { usePostHog } from 'posthog-react-native'
@@ -36,9 +35,6 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const posthog = usePostHog()
   const [page, setPage] = useState(0)
   const pageRef = useRef(0)
-  const [notifDate, setNotifDate] = useState(() => {
-    const d = new Date(); d.setHours(DEFAULT_EVENING_HOUR, DEFAULT_EVENING_MINUTE, 0, 0); return d
-  })
   const slideAnim = useRef(new Animated.Value(0)).current
 
   const goToPage = (next: number) => {
@@ -80,15 +76,18 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       if (granted) {
         await AsyncStorage.multiSet([
           [NOTIF_ENABLED_KEY, 'true'],
-          [NOTIF_HOUR_KEY, String(notifDate.getHours())],
-          [NOTIF_MINUTE_KEY, String(notifDate.getMinutes())],
+          [NOTIF_HOUR_KEY, String(DEFAULT_EVENING_HOUR)],
+          [NOTIF_MINUTE_KEY, String(DEFAULT_EVENING_MINUTE)],
         ])
       }
     }
-    await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true')
+    await AsyncStorage.multiSet([
+      [ONBOARDING_COMPLETE_KEY, 'true'],
+      ['whats_new_shown_v1.1.0', 'true'],
+    ])
     posthog.capture('onboarding_completed', {
       notif_enabled: enableNotif,
-      notif_hour: enableNotif ? notifDate.getHours() : null,
+      notif_hour: enableNotif ? DEFAULT_EVENING_HOUR : null,
     })
     onComplete()
   }
@@ -126,14 +125,6 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               {t('onboarding.notif.body')}
             </Text>
 
-            <DateTimePicker
-              value={notifDate}
-              mode="time"
-              display="spinner"
-              themeVariant={isDark ? 'dark' : 'light'}
-              onChange={(_, date) => { if (date) setNotifDate(date) }}
-              style={{ width: '100%' }}
-            />
 
             <Pressable
               style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
