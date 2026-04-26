@@ -59,9 +59,12 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
     ]).start()
   }, [])
 
+  const isDismissing = useRef(false)
   const dismissRef = useRef<() => void>(null as unknown as () => void)
 
   const dismiss = () => {
+    if (isDismissing.current) return
+    isDismissing.current = true
     sheetTranslateY.stopAnimation()
     backdropOpacity.stopAnimation()
     Animated.parallel([
@@ -74,7 +77,7 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_e: GestureResponderEvent, gs: PanResponderGestureState) => {
         if (gs.dy > 0) {
@@ -107,7 +110,7 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
     : `uv.${level === 'low' ? 'low' : level === 'medium' ? 'medium' : 'high'}`
 
   return (
-    <Modal animationType="none" transparent statusBarTranslucent>
+    <Modal animationType="none" transparent statusBarTranslucent hardwareAccelerated>
       <View style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" />
         <Pressable style={styles.backdropTouch} onPress={dismiss} />
@@ -151,7 +154,7 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
             <Text style={[styles.tipText, isDark && styles.textDark]}>{t(tipKey)}</Text>
           </View>
 
-          <Pressable style={styles.closeButton} onPress={dismiss}>
+          <Pressable style={styles.closeButton} onPress={dismiss} android_ripple={null}>
             <Text style={styles.closeText}>{t('outfit.close')}</Text>
           </Pressable>
         </Animated.View>

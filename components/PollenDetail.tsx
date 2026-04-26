@@ -125,9 +125,12 @@ export function PollenDetail({ plants, overallLevel, weeklyForecast, country, on
     ]).start()
   }, [])
 
+  const isDismissing = useRef(false)
   const dismissRef = useRef<() => void>(null as unknown as () => void)
 
   const dismiss = () => {
+    if (isDismissing.current) return
+    isDismissing.current = true
     sheetTranslateY.stopAnimation()
     backdropOpacity.stopAnimation()
     Animated.parallel([
@@ -140,7 +143,7 @@ export function PollenDetail({ plants, overallLevel, weeklyForecast, country, on
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_e: GestureResponderEvent, gs: PanResponderGestureState) => {
         if (gs.dy > 0) {
@@ -165,7 +168,7 @@ export function PollenDetail({ plants, overallLevel, weeklyForecast, country, on
   const tipKey = `pollenDetail.tip.${overallLevel}` as const
 
   return (
-    <Modal animationType="none" transparent statusBarTranslucent>
+    <Modal animationType="none" transparent statusBarTranslucent hardwareAccelerated>
       <View style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" />
         <Pressable style={styles.backdropTouch} onPress={dismiss} />
@@ -237,7 +240,7 @@ export function PollenDetail({ plants, overallLevel, weeklyForecast, country, on
             </View>
           </ScrollView>
 
-          <Pressable style={[styles.closeButton, { backgroundColor: overallColor }]} onPress={dismiss}>
+          <Pressable style={[styles.closeButton, { backgroundColor: overallColor }]} onPress={dismiss} android_ripple={null}>
             <Text style={styles.closeText}>{t('outfit.close')}</Text>
           </Pressable>
         </Animated.View>
