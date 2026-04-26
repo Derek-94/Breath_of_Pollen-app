@@ -55,7 +55,7 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
   useEffect(() => {
     Animated.parallel([
       Animated.timing(backdropOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.spring(sheetTranslateY, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: true }),
+      Animated.spring(sheetTranslateY, { toValue: 0, damping: 25, stiffness: 200, useNativeDriver: false }),
     ]).start()
   }, [])
 
@@ -69,7 +69,7 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
     backdropOpacity.stopAnimation()
     Animated.parallel([
       Animated.timing(backdropOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-      Animated.timing(sheetTranslateY, { toValue: SHEET_MAX, duration: 300, useNativeDriver: true }),
+      Animated.timing(sheetTranslateY, { toValue: SHEET_MAX, duration: 300, useNativeDriver: false }),
     ]).start(() => onClose())
   }
 
@@ -90,7 +90,7 @@ export function InfoCardDetail({ type, level, numericValue, onClose }: InfoCardD
           dismissRef.current()
         } else {
           Animated.parallel([
-            Animated.spring(sheetTranslateY, { toValue: 0, damping: 40, stiffness: 300, overshootClamping: true, useNativeDriver: true }),
+            Animated.spring(sheetTranslateY, { toValue: 0, damping: 40, stiffness: 300, overshootClamping: true, useNativeDriver: false }),
             Animated.timing(backdropOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
           ]).start()
         }

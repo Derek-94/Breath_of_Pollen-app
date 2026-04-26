@@ -49,7 +49,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
         toValue: 0,
         damping: 25,
         stiffness: 200,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start()
   }, [])
@@ -71,7 +71,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
       Animated.timing(sheetTranslateY, {
         toValue: SHEET_MAX,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => onClose())
   }
@@ -98,7 +98,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
               damping: 40,
               stiffness: 300,
               overshootClamping: true,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(backdropOpacity, {
               toValue: 1,
