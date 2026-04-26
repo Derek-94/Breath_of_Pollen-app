@@ -111,9 +111,8 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
   return (
     <Modal animationType="none" transparent statusBarTranslucent>
       <View style={styles.overlay}>
-        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
-        </Animated.View>
+        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" />
+        <Pressable style={styles.backdropTouch} onPress={dismiss} />
 
         <Animated.View
           collapsable={false}
@@ -194,11 +193,13 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  backdropTouch: {
+    flex: 1,
   },
   sheet: {
     backgroundColor: '#fff',
