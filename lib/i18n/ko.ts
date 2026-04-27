@@ -243,6 +243,11 @@ const ko = {
       notif: { title: '꽃가루 알림', desc: '아침·저녁 두 번, 분 단위로 알림 시간을 설정할 수 있어요' },
       onboarding: { title: '온보딩 화면', desc: '첫 실행 시 앱 소개 및 알림 설정 안내' },
     },
+    v120: {
+      region: { title: '한국 지역 세분화', desc: '시/군/구 단위까지 세밀하게 선택할 수 있어요' },
+      lang: { title: '다국어 표시 개선', desc: '지역명이 설정 언어에 맞게 정확히 표시돼요' },
+      android: { title: 'Android 버전 출시 예정', desc: 'Google Play에서 곧 만나볼 수 있어요 🎉' },
+    },
   },
 
   onboarding: {

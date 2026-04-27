@@ -243,6 +243,11 @@ const en = {
       notif: { title: 'Pollen Alerts', desc: 'Set morning & evening reminders with minute-level precision' },
       onboarding: { title: 'Onboarding', desc: 'Guided intro and notification setup on first launch' },
     },
+    v120: {
+      region: { title: 'Korea Region Detail', desc: 'Now select down to district (gu/gun) level' },
+      lang: { title: 'Multilingual Improvements', desc: 'Location names now display consistently in your language' },
+      android: { title: 'Android Coming Soon', desc: 'Coming soon to Google Play 🎉' },
+    },
   },
 
   onboarding: {

@@ -243,6 +243,11 @@ const ja = {
       notif: { title: '花粉アラート', desc: '朝・夕の2回、分単位で通知時間を設定できます' },
       onboarding: { title: 'オンボーディング画面', desc: '初回起動時にアプリ紹介と通知設定をご案内' },
     },
+    v120: {
+      region: { title: '韓国地域の細分化', desc: '市区郡レベルまで詳しく選択できるようになりました' },
+      lang: { title: '多言語表示の改善', desc: '地域名が設定言語に合わせて正しく表示されます' },
+      android: { title: 'Android版 近日公開', desc: 'Google Playでもまもなく登場します 🎉' },
+    },
   },
 
   onboarding: {

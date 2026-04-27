@@ -83,7 +83,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     }
     await AsyncStorage.multiSet([
       [ONBOARDING_COMPLETE_KEY, 'true'],
-      ['whats_new_shown_v1.1.0', 'true'],
+      ['whats_new_shown_v1.2.0', 'true'],
     ])
     posthog.capture('onboarding_completed', {
       notif_enabled: enableNotif,

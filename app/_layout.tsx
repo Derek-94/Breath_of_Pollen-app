@@ -45,7 +45,7 @@ function InnerLayout() {
     initLanguage().then(async () => {
       const [onboardingDone, whatsNewShown] = await Promise.all([
         AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY),
-        AsyncStorage.getItem('whats_new_shown_v1.1.0'),
+        AsyncStorage.getItem('whats_new_shown_v1.2.0'),
       ])
       if (onboardingDone !== 'true') {
         setShowOnboarding(true)
@@ -58,7 +58,7 @@ function InnerLayout() {
   }, [])
 
   const handleWhatsNewClose = async () => {
-    await AsyncStorage.setItem('whats_new_shown_v1.1.0', 'true')
+    await AsyncStorage.setItem('whats_new_shown_v1.2.0', 'true')
     setShowWhatsNew(false)
   }
 
@@ -82,10 +82,11 @@ function InnerLayout() {
       )}
       {showWhatsNew && (
         <WhatsNew
-          version="1.1.0"
+          version="1.2.0"
           features={[
-            { emoji: '🔔', title: t('whatsNew.v110.notif.title'), desc: t('whatsNew.v110.notif.desc') },
-            { emoji: '👋', title: t('whatsNew.v110.onboarding.title'), desc: t('whatsNew.v110.onboarding.desc') },
+            { emoji: '🗺️', title: t('whatsNew.v120.region.title'), desc: t('whatsNew.v120.region.desc') },
+            { emoji: '🌐', title: t('whatsNew.v120.lang.title'), desc: t('whatsNew.v120.lang.desc') },
+            { emoji: '🤖', title: t('whatsNew.v120.android.title'), desc: t('whatsNew.v120.android.desc') },
           ]}
           onClose={handleWhatsNewClose}
         />

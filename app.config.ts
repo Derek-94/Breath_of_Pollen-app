@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: '花粉の呼吸',
   slug: 'pollen-app',
-  version: '1.1.2',
+  version: '1.2.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'pollenapp',
@@ -18,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.pollenbreathing.app',
-    buildNumber: '1',
+    buildNumber: '2',
     infoPlist: {
       NSLocationWhenInUseUsageDescription: '現在地の天気・花粉情報を取得するために位置情報を使用します。',
     },
