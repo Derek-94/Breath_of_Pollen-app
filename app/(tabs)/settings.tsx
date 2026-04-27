@@ -14,8 +14,10 @@ import {
   Modal,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native'
 import { TimePicker } from '@/components/TimePicker'
+import DateTimePicker from '@react-native-community/datetimepicker'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -344,11 +346,21 @@ export default function SettingsScreen() {
             style={[styles.modalSheet, isDark && styles.modalSheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
           >
             <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t('settings.notifTime')}</Text>
-            <TimePicker
-              hour={modalHour}
-              minute={modalMinute}
-              onChange={(h, m) => { setModalHour(h); setModalMinute(m) }}
-            />
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={new Date(new Date().setHours(modalHour, modalMinute, 0, 0))}
+                mode="time"
+                display="spinner"
+                themeVariant={isDark ? 'dark' : 'light'}
+                onChange={(_, date) => { if (date) { setModalHour(date.getHours()); setModalMinute(date.getMinutes()) } }}
+              />
+            ) : (
+              <TimePicker
+                hour={modalHour}
+                minute={modalMinute}
+                onChange={(h, m) => { setModalHour(h); setModalMinute(m) }}
+              />
+            )}
             <Pressable
               style={({ pressed }) => [styles.modalConfirm, pressed && { opacity: 0.8 }]}
               onPress={handleTimeConfirm}
