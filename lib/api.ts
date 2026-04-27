@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { mapKMAGrade, type PollenLevel } from '@/lib/weather-utils'
-import { findNearestKRRegion, KOREA_REGIONS } from '@/lib/korea-coords'
+import { findNearestKRSigungu, KOREA_SIGUNGU, KOREA_SIDO } from '@/lib/korea-coords'
 import i18n from '@/lib/i18n'
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://breath-of-pollen.vercel.app'
@@ -153,8 +153,9 @@ function extractKMADays(res: any): PollenLevel[] {
 }
 
 export async function fetchPollenKR(lat: number, lon: number): Promise<KRPollenResult | null> {
-  const regionName = findNearestKRRegion(lat, lon)
-  const { areaNo } = KOREA_REGIONS[regionName]
+  const regionKey = findNearestKRSigungu(lat, lon)
+  const region = KOREA_SIGUNGU[regionKey] ?? KOREA_SIDO[regionKey]
+  const { areaNo } = region
 
   // KST 현재 월 (1-indexed)
   const kstMonth = new Date(Date.now() + 9 * 3600 * 1000).getUTCMonth() + 1

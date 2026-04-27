@@ -4,7 +4,7 @@ import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import { getNotificationSettings, schedulePollenAlert, scheduleMorningAlert } from '@/lib/notifications'
 import { fetchWeather, fetchPollen, fetchPollenKR, fetchLocation, fetchAirQuality, fetchYesterdayHighTemp } from '@/lib/api'
-import { findNearestKRRegion } from '@/lib/korea-coords'
+import { findNearestKRSigungu } from '@/lib/korea-coords'
 import {
   getWeatherInfo,
   mapPollenIndex,
@@ -99,7 +99,7 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
       const locationPromise = locationName
         ? Promise.resolve(locationName)
         : country === 'KR'
-          ? Promise.resolve(findNearestKRRegion(lat, lon))
+          ? Promise.resolve(findNearestKRSigungu(lat, lon))
           : fetchLocation(lat, lon)
 
       const [weather, pollenRaw, resolvedLocation, airQuality] = await Promise.all([

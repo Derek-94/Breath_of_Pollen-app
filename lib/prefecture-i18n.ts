@@ -1,3 +1,5 @@
+import { KOREA_SIGUNGU_EN, getSigunguDisplayName } from '@/lib/korea-coords'
+
 /**
  * Romanized display names for all 47 prefectures.
  * Keys match PREFECTURE_COORDS keys (Japanese names).
@@ -152,8 +154,12 @@ export const KOREA_GROUPS_ROMANIZED: Record<string, string> = {
  * - Unknown keys (GPS geocoded names): returns as-is
  */
 export function localizeLocationName(name: string, language: string): string {
+  // 시/군/구 복합키 (e.g. '서울특별시_강남구') 처리
+  if (name.includes('_')) {
+    if (language === 'en') return KOREA_SIGUNGU_EN[name] ?? getSigunguDisplayName(name)
+    return getSigunguDisplayName(name)
+  }
   if (language === 'ja') {
-    // JP prefectures are already Japanese; KR regions → Katakana
     return KOREA_KATAKANA[name] ?? name
   }
   if (PREFECTURE_ROMANIZED[name]) return PREFECTURE_ROMANIZED[name]
