@@ -172,30 +172,32 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
       {activeTab === 'KR' && !selectedSido && KOREA_SIDO_GROUPS.map((group) => (
         <View key={group.label} style={styles.regionBlock}>
           <Text style={[styles.regionTitle, isDark && styles.textMuted]}>{group.label}</Text>
-          {group.sidos.map((sido) => {
-            const displayName = getSidoDisplayName(sido)
-            const isCurrentSido = currentLocationName?.includes('_') &&
-              KOREA_SIGUNGU[currentLocationName]?.sido === sido
-            return (
-              <Pressable
-                key={sido}
-                style={({ pressed }) => [
-                  styles.sidoRow, isDark && styles.sidoRowDark,
-                  isCurrentSido && styles.sidoRowSelected, isCurrentSido && isDark && styles.sidoRowSelectedDark,
-                  pressed && styles.chipPressed,
-                ]}
-                onPress={() => setSelectedSido(sido)}
-              >
-                <Text style={[styles.sidoText, isDark && styles.textDark, isCurrentSido && styles.chipTextSelected]}>
-                  {displayName}
-                </Text>
-                {isCurrentSido
-                  ? <Text style={styles.checkmark}>✓</Text>
-                  : <Text style={[styles.chevron, isDark && styles.textMuted]}>›</Text>
-                }
-              </Pressable>
-            )
-          })}
+          <View style={styles.sidoGrid}>
+            {group.sidos.map((sido) => {
+              const displayName = getSidoDisplayName(sido)
+              const isCurrentSido = currentLocationName?.includes('_') &&
+                KOREA_SIGUNGU[currentLocationName]?.sido === sido
+              return (
+                <Pressable
+                  key={sido}
+                  style={({ pressed }) => [
+                    styles.sidoRow, isDark && styles.sidoRowDark,
+                    isCurrentSido && styles.sidoRowSelected, isCurrentSido && isDark && styles.sidoRowSelectedDark,
+                    pressed && styles.chipPressed,
+                  ]}
+                  onPress={() => setSelectedSido(sido)}
+                >
+                  <Text style={[styles.sidoText, isDark && styles.textDark, isCurrentSido && styles.chipTextSelected]} numberOfLines={1}>
+                    {displayName}
+                  </Text>
+                  {isCurrentSido
+                    ? <Text style={styles.checkmark}>✓</Text>
+                    : <Text style={[styles.chevron, isDark && styles.textMuted]}>›</Text>
+                  }
+                </Pressable>
+              )
+            })}
+          </View>
         </View>
       ))}
 
@@ -268,16 +270,19 @@ const styles = StyleSheet.create({
   chipPressed: { opacity: 0.7, transform: [{ scale: 0.96 }] },
   chipEmoji: { fontSize: 13 },
   chipText: { fontSize: 14, color: '#333' },
+  sidoGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+  },
   sidoRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#f0f0f0', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 13,
-    marginBottom: 6,
+    paddingHorizontal: 14, paddingVertical: 13,
+    width: '48.5%',
   },
   sidoRowDark: { backgroundColor: '#2a2a2a' },
   sidoRowSelected: { backgroundColor: '#fff0eb', borderWidth: 1.5, borderColor: '#f87171' },
   sidoRowSelectedDark: { backgroundColor: '#2a1a1a', borderWidth: 1.5, borderColor: '#fb923c' },
-  sidoText: { flex: 1, fontSize: 15, fontWeight: '500', color: '#333' },
+  sidoText: { flex: 1, fontSize: 14, fontWeight: '500', color: '#333' },
   backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#f0f0f0', borderRadius: 12,
