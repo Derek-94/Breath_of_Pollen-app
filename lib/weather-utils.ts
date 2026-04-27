@@ -8,6 +8,7 @@ export interface OutfitItem {
   recommended: boolean
   /** i18n key, e.g. 'outfit.sunProtection' — undefined if no reason */
   reason?: string
+  reasonParams?: Record<string, unknown>
 }
 
 export interface OutfitSummary {
@@ -89,6 +90,7 @@ export function getOutfitRecommendation(
   let summaryBaseKey: string
 
   if (temp >= 28) {
+    // 민소매·반팔·반바지
     baseItems = [
       { icon: '👕', name: 'outfit.tshirt', recommended: true },
       { icon: '🩳', name: 'outfit.shorts', recommended: true },
@@ -96,34 +98,55 @@ export function getOutfitRecommendation(
     ]
     summaryBaseKey = 'outfitSummary.hot'
   } else if (temp >= 23) {
+    // 반팔·얇은 셔츠·반바지·면바지
     baseItems = [
       { icon: '👕', name: 'outfit.tshirt', recommended: true },
       { icon: '👖', name: 'outfit.pants', recommended: true },
-      { icon: '🧣', name: 'outfit.lightLayer', recommended: false },
+      { icon: '🩳', name: 'outfit.shorts', recommended: false },
     ]
     summaryBaseKey = 'outfitSummary.warm'
-  } else if (temp >= 18) {
+  } else if (temp >= 20) {
+    // 블라우스·긴팔 티·면바지·슬랙스
     baseItems = [
       { icon: '👔', name: 'outfit.longSleeveShirt', recommended: true },
       { icon: '👖', name: 'outfit.pants', recommended: true },
-      { icon: '🧥', name: 'outfit.lightJacket', recommended: false },
+      { icon: '🧣', name: 'outfit.lightLayer', recommended: false },
     ]
     summaryBaseKey = 'outfitSummary.mild'
-  } else if (temp >= 13) {
+  } else if (temp >= 17) {
+    // 얇은 가디건·맨투맨·후드·긴바지
     baseItems = [
-      { icon: '🧥', name: 'outfit.jacket', recommended: true, reason: 'outfit.tempOptimal' },
-      { icon: '👕', name: 'outfit.longSleeveShirt', recommended: true },
+      { icon: '👘', name: 'outfit.hoodie', recommended: true },
+      { icon: '👔', name: 'outfit.longSleeveShirt', recommended: true },
+      { icon: '👖', name: 'outfit.pants', recommended: true },
+    ]
+    summaryBaseKey = 'outfitSummary.spring'
+  } else if (temp >= 12) {
+    // 자켓·가디건·청자켓·니트·청바지
+    baseItems = [
+      { icon: '🧥', name: 'outfit.jacket', recommended: true, reason: 'outfit.tempOptimal', reasonParams: { temp } },
+      { icon: '🧶', name: 'outfit.cardigan', recommended: false },
       { icon: '👖', name: 'outfit.pants', recommended: true },
     ]
     summaryBaseKey = 'outfitSummary.cool'
-  } else if (temp >= 8) {
+  } else if (temp >= 9) {
+    // 트렌치코트·야상·점퍼
     baseItems = [
       { icon: '🧥', name: 'outfit.coat', recommended: true, reason: 'outfit.warmthNeeded' },
       { icon: '🧶', name: 'outfit.sweater', recommended: true },
       { icon: '👖', name: 'outfit.pants', recommended: true },
     ]
+    summaryBaseKey = 'outfitSummary.chilly'
+  } else if (temp >= 5) {
+    // 울코트·히트텍·가죽자켓·기모
+    baseItems = [
+      { icon: '🧥', name: 'outfit.heavyCoat', recommended: true, reason: 'outfit.warmthNeeded' },
+      { icon: '🧶', name: 'outfit.sweater', recommended: true },
+      { icon: '👖', name: 'outfit.pants', recommended: true },
+    ]
     summaryBaseKey = 'outfitSummary.cold'
   } else {
+    // 패딩·두꺼운 코트·목도리·장갑
     baseItems = [
       { icon: '🧥', name: 'outfit.heavyCoat', recommended: true, reason: 'outfit.warmthEssential' },
       { icon: '🧶', name: 'outfit.sweater', recommended: true },

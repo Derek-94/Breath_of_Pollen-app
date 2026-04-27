@@ -157,7 +157,7 @@ export function OutfitDetail({ items, temperature, pollenLevel, isOffSeason, lau
                 <View style={styles.itemInfo}>
                   <Text style={[styles.itemName, isDark && styles.textDark]}>{t(item.name)}</Text>
                   {item.reason && (
-                    <Text style={[styles.itemReason, isDark && styles.textMuted]}>{t(item.reason)}</Text>
+                    <Text style={[styles.itemReason, isDark && styles.textMuted]}>{t(item.reason, item.reasonParams)}</Text>
                   )}
                 </View>
                 <Text style={item.recommended ? styles.recommended : styles.optional}>

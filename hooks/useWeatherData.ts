@@ -160,7 +160,8 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
       let pm2_5: number | null = null
       if (airQuality?.hourly?.pm2_5) {
         const nowHour = new Date().getHours()
-        const todayDateStr = new Date().toISOString().slice(0, 10)
+        const _now = new Date()
+        const todayDateStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
         const aqTimes: string[] = airQuality.hourly.time ?? []
         const aqIdx = aqTimes.findIndex((t: string) => t === `${todayDateStr}T${String(nowHour).padStart(2, '0')}:00`)
         const raw = aqIdx >= 0 ? airQuality.hourly.pm2_5[aqIdx] : airQuality.hourly.pm2_5[0]
@@ -173,8 +174,9 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
       // Hourly chart (current hour + next 7 hours)
       const now = new Date()
       const currentHour = now.getHours()
-      const todayStr = now.toISOString().slice(0, 10)
-      const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10)
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const _yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+      const yesterdayStr = `${_yesterday.getFullYear()}-${String(_yesterday.getMonth() + 1).padStart(2, '0')}-${String(_yesterday.getDate()).padStart(2, '0')}`
 
       // Yesterday comparison
       const SNAPSHOT_KEY = 'daily_snapshot'
@@ -207,13 +209,15 @@ export function useWeatherData(lat: number | null, lon: number | null, locationN
         await AsyncStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ date: todayStr, high: todayHigh, pollenLevel: overallLevel }))
       } catch { /* non-fatal */ }
       const hourlyTimes: string[] = weather.hourly.time
-      const startIdx = hourlyTimes.findIndex(
+      const foundIdx = hourlyTimes.findIndex(
         (t: string) => t === `${todayStr}T${String(currentHour).padStart(2, '0')}:00`
       )
+      const startIdx = foundIdx >= 0 ? foundIdx : 0
       const hourlyData = Array.from({ length: 8 }, (_, i) => {
         const idx = startIdx + i
         const timeStr: string = hourlyTimes[idx] ?? ''
-        const h = parseInt(timeStr.slice(11, 13))
+        const parsed = parseInt(timeStr.slice(11, 13), 10)
+        const h = Number.isNaN(parsed) ? (currentHour + i) % 24 : parsed
         return {
           hour: h,
           temp: Math.round(weather.hourly.temperature_2m[idx] ?? currentTemp),
