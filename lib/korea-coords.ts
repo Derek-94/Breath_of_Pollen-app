@@ -585,5 +585,18 @@ export function findNearestKRSigungu(lat: number, lon: number): string {
 
 export function getSigunguDisplayName(key: string): string {
   if (!key.includes('_')) return key
-  return key.split('_')[1]
+  const name = key.split('_')[1]
+  // '성남시분당구' → '성남시 분당구', '포항시남구' → '포항시 남구'
+  const spaced = name.match(/^(.+시)(.+[구군])$/)
+  if (spaced) return `${spaced[1]} ${spaced[2]}`
+  return name
 }
+
+export const KOREA_SIDO_GROUPS: { label: string; sidos: string[] }[] = [
+  { label: '수도권', sidos: ['서울특별시', '인천광역시', '경기도'] },
+  { label: '강원', sidos: ['강원특별자치도'] },
+  { label: '충청', sidos: ['세종특별자치시', '대전광역시', '충청북도', '충청남도'] },
+  { label: '전라', sidos: ['광주광역시', '전북특별자치도', '전라남도'] },
+  { label: '경상', sidos: ['부산광역시', '대구광역시', '울산광역시', '경상북도', '경상남도'] },
+  { label: '제주', sidos: ['제주특별자치도'] },
+]

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-nati
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import { PREFECTURE_COORDS, REGIONS } from '@/lib/prefecture-coords'
-import { KOREA_SIDO, KOREA_SIGUNGU, KOREA_SIDO_KEYS, KOREA_SIDO_EN, KOREA_SIGUNGU_EN, getSigunguDisplayName } from '@/lib/korea-coords'
+import { KOREA_SIDO, KOREA_SIGUNGU, KOREA_SIDO_KEYS, KOREA_SIDO_EN, KOREA_SIGUNGU_EN, KOREA_SIDO_GROUPS, getSigunguDisplayName } from '@/lib/korea-coords'
 import {
   PREFECTURE_ROMANIZED,
   PREFECTURE_HIGHLIGHT_EMOJI,
@@ -168,36 +168,36 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
         </View>
       ))}
 
-      {/* 한국 섹션 — 시/도 리스트 */}
-      {activeTab === 'KR' && !selectedSido && (
-        <View style={styles.regionBlock}>
-          <View style={styles.grid}>
-            {sidoList.map((sido) => {
-              const hasSigungu = (KOREA_SIDO_KEYS[sido]?.length ?? 0) > 0
-              const displayName = getSidoDisplayName(sido)
-              const isCurrentSido = currentLocationName?.includes('_') &&
-                KOREA_SIGUNGU[currentLocationName]?.sido === sido
-              return (
-                <Pressable
-                  key={sido}
-                  style={({ pressed }) => [
-                    styles.chip, isDark && styles.chipDark,
-                    isCurrentSido && styles.chipSelected, isCurrentSido && isDark && styles.chipSelectedDark,
-                    pressed && styles.chipPressed,
-                  ]}
-                  onPress={() => hasSigungu ? setSelectedSido(sido) : null}
-                >
-                  <Text style={[styles.chipText, isDark && styles.textDark, isCurrentSido && styles.chipTextSelected]}>
-                    {displayName}
-                  </Text>
-                  {hasSigungu && <Text style={[styles.chevron, isDark && styles.textMuted]}>›</Text>}
-                  {isCurrentSido && <Text style={styles.checkmark}>✓</Text>}
-                </Pressable>
-              )
-            })}
-          </View>
+      {/* 한국 섹션 — 시/도 리스트 (카테고리 그룹) */}
+      {activeTab === 'KR' && !selectedSido && KOREA_SIDO_GROUPS.map((group) => (
+        <View key={group.label} style={styles.regionBlock}>
+          <Text style={[styles.regionTitle, isDark && styles.textMuted]}>{group.label}</Text>
+          {group.sidos.map((sido) => {
+            const displayName = getSidoDisplayName(sido)
+            const isCurrentSido = currentLocationName?.includes('_') &&
+              KOREA_SIGUNGU[currentLocationName]?.sido === sido
+            return (
+              <Pressable
+                key={sido}
+                style={({ pressed }) => [
+                  styles.sidoRow, isDark && styles.sidoRowDark,
+                  isCurrentSido && styles.sidoRowSelected, isCurrentSido && isDark && styles.sidoRowSelectedDark,
+                  pressed && styles.chipPressed,
+                ]}
+                onPress={() => setSelectedSido(sido)}
+              >
+                <Text style={[styles.sidoText, isDark && styles.textDark, isCurrentSido && styles.chipTextSelected]}>
+                  {displayName}
+                </Text>
+                {isCurrentSido
+                  ? <Text style={styles.checkmark}>✓</Text>
+                  : <Text style={[styles.chevron, isDark && styles.textMuted]}>›</Text>
+                }
+              </Pressable>
+            )
+          })}
         </View>
-      )}
+      ))}
 
       {/* 한국 섹션 — 시/군/구 리스트 */}
       {activeTab === 'KR' && selectedSido && (
@@ -268,6 +268,16 @@ const styles = StyleSheet.create({
   chipPressed: { opacity: 0.7, transform: [{ scale: 0.96 }] },
   chipEmoji: { fontSize: 13 },
   chipText: { fontSize: 14, color: '#333' },
+  sidoRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#f0f0f0', borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 13,
+    marginBottom: 6,
+  },
+  sidoRowDark: { backgroundColor: '#2a2a2a' },
+  sidoRowSelected: { backgroundColor: '#fff0eb', borderWidth: 1.5, borderColor: '#f87171' },
+  sidoRowSelectedDark: { backgroundColor: '#2a1a1a', borderWidth: 1.5, borderColor: '#fb923c' },
+  sidoText: { flex: 1, fontSize: 15, fontWeight: '500', color: '#333' },
   backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#f0f0f0', borderRadius: 12,
