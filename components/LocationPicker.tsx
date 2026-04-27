@@ -6,8 +6,13 @@ import { PREFECTURE_COORDS, REGIONS } from '@/lib/prefecture-coords'
 import { KOREA_SIDO, KOREA_SIGUNGU, KOREA_SIDO_KEYS, KOREA_SIDO_EN, KOREA_SIGUNGU_EN, KOREA_SIDO_GROUPS, getSigunguDisplayName, getKRSigunguGrouped } from '@/lib/korea-coords'
 import {
   PREFECTURE_ROMANIZED,
+  PREFECTURE_KOREAN,
   PREFECTURE_HIGHLIGHT_EMOJI,
   REGIONS_ROMANIZED,
+  REGIONS_KOREAN,
+  KOREA_SIDO_KATAKANA,
+  KOREA_SIGUNGU_KATAKANA,
+  KOREA_CITIES_KATAKANA,
 } from '@/lib/prefecture-i18n'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -25,7 +30,12 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
 
   const isJapanese = i18n.language === 'ja'
   const isEnglish = i18n.language === 'en'
-  const [activeTab, setActiveTab] = useState<'JP' | 'KR'>(i18n.language === 'ko' ? 'KR' : 'JP')
+  const [activeTab, setActiveTab] = useState<'JP' | 'KR'>(() => {
+    if (currentLocationName?.includes('_')) return 'KR'
+    if (currentLocationName && KOREA_SIDO[currentLocationName]) return 'KR'
+    if (currentLocationName) return 'JP'
+    return i18n.language === 'ko' ? 'KR' : 'JP'
+  })
   const [selectedSido, setSelectedSido] = useState<string | null>(() => {
     if (currentLocationName?.includes('_')) {
       return KOREA_SIGUNGU[currentLocationName]?.sido ?? null
@@ -43,11 +53,13 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
 
   function getDisplayName(jaKey: string): string {
     if (isJapanese) return jaKey
+    if (i18n.language === 'ko') return PREFECTURE_KOREAN[jaKey] ?? jaKey
     return PREFECTURE_ROMANIZED[jaKey] ?? jaKey
   }
 
   function getRegionDisplayName(jaKey: string): string {
     if (isJapanese) return jaKey
+    if (i18n.language === 'ko') return REGIONS_KOREAN[jaKey] ?? jaKey
     return REGIONS_ROMANIZED[jaKey] ?? jaKey
   }
 
@@ -56,13 +68,28 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
   }
 
   function getSidoDisplayName(sido: string): string {
+    if (isJapanese) return KOREA_SIDO_KATAKANA[sido] ?? sido
     if (isEnglish) return KOREA_SIDO_EN[sido] ?? sido
     return sido
   }
 
   function getSigunguLabel(key: string): string {
+    if (isJapanese) return KOREA_SIGUNGU_KATAKANA[key] ?? getSigunguDisplayName(key)
     if (isEnglish) return KOREA_SIGUNGU_EN[key] ?? getSigunguDisplayName(key)
     return getSigunguDisplayName(key)
+  }
+
+  function getCityDisplayName(city: string): string {
+    if (isJapanese) return KOREA_CITIES_KATAKANA[city] ?? city
+    if (isEnglish) {
+      const romanized: Record<string, string> = {
+        '수원시': 'Suwon', '성남시': 'Seongnam', '안양시': 'Anyang', '부천시': 'Bucheon',
+        '안산시': 'Ansan', '고양시': 'Goyang', '용인시': 'Yongin', '청주시': 'Cheongju',
+        '천안시': 'Cheonan', '전주시': 'Jeonju', '포항시': 'Pohang', '창원시': 'Changwon',
+      }
+      return romanized[city] ?? city
+    }
+    return city
   }
 
   function confirmSelect(name: string, displayName: string, lat: number, lon: number) {
@@ -180,9 +207,13 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
       ))}
 
       {/* 한국 섹션 — 시/도 리스트 (카테고리 그룹) */}
-      {activeTab === 'KR' && !selectedSido && KOREA_SIDO_GROUPS.map((group) => (
+      {activeTab === 'KR' && !selectedSido && KOREA_SIDO_GROUPS.map((group) => {
+        const GROUP_JA: Record<string, string> = { '수도권': '首都圏', '강원': 'カンウォン', '충청': 'チュンチョン', '전라': 'チョルラ', '경상': 'キョンサン', '제주': 'チェジュ' }
+        const GROUP_EN: Record<string, string> = { '수도권': 'Seoul Metro', '강원': 'Gangwon', '충청': 'Chungcheong', '전라': 'Jeolla', '경상': 'Gyeongsang', '제주': 'Jeju' }
+        const groupLabel = isJapanese ? (GROUP_JA[group.label] ?? group.label) : isEnglish ? (GROUP_EN[group.label] ?? group.label) : group.label
+        return (
         <View key={group.label} style={styles.regionBlock}>
-          <Text style={[styles.regionTitle, isDark && styles.textMuted]}>{group.label}</Text>
+          <Text style={[styles.regionTitle, isDark && styles.textMuted]}>{groupLabel}</Text>
           <View style={styles.sidoGrid}>
             {group.sidos.map((sido) => {
               const displayName = getSidoDisplayName(sido)
@@ -210,7 +241,8 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
             })}
           </View>
         </View>
-      ))}
+        )
+      })}
 
       {/* 한국 섹션 — 2단계: 중간 시 목록 (경기/경남/경북 등) */}
       {activeTab === 'KR' && selectedSido && !selectedCity && grouped?.hasCities && (
@@ -240,9 +272,11 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.sidoText, isDark && styles.textDark, isCurrentCity && styles.chipTextSelected]}>
-                      {city.name}
+                      {getCityDisplayName(city.name)}
                     </Text>
-                    <Text style={[styles.citySubText, isDark && styles.textMuted]}>{city.keys.length}개 구</Text>
+                    <Text style={[styles.citySubText, isDark && styles.textMuted]}>
+                      {isJapanese ? `${city.keys.length}区` : isEnglish ? `${city.keys.length} districts` : `${city.keys.length}개 구`}
+                    </Text>
                   </View>
                   {isCurrentCity
                     ? <Text style={styles.checkmark}>✓</Text>
@@ -256,7 +290,7 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
           {grouped.standalones.length > 0 && (
             <>
               <Text style={[styles.regionTitle, isDark && styles.textMuted, { marginTop: 16 }]}>
-                {isEnglish ? 'Other Cities & Counties' : '시/군'}
+                {isJapanese ? 'その他の市/郡' : isEnglish ? 'Other Cities & Counties' : '시/군'}
               </Text>
               <View style={styles.grid}>
                 {grouped.standalones.map((key) => {
@@ -298,15 +332,31 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
             onPress={() => setSelectedCity(null)}
           >
             <Text style={[styles.backChevron, isDark && styles.textDark]}>‹</Text>
-            <Text style={[styles.backText, isDark && styles.textDark]}>{selectedCity}</Text>
+            <Text style={[styles.backText, isDark && styles.textDark]}>{getCityDisplayName(selectedCity)}</Text>
           </Pressable>
           <View style={styles.grid}>
             {cityKeys.map((key) => {
               const sg = KOREA_SIGUNGU[key]
               if (!sg) return null
               const name = key.split('_')[1]
-              const m = name.match(/^.+시(.+[구군])$/)
-              const displayName = m ? m[1] : getSigunguLabel(key)
+              const koM = name.match(/^.+시(.+[구군])$/)
+              let displayName: string
+              if (isJapanese) {
+                displayName = getSigunguLabel(key)
+              } else if (isEnglish && koM) {
+                // 'Suwon Jangan-gu' → 'Jangan-gu' (도시 접두어 제거)
+                const fullEn = KOREA_SIGUNGU_EN[key] ?? ''
+                displayName = fullEn.replace(/^\S+\s/, '') || getSigunguLabel(key)
+              } else if (koM) {
+                displayName = koM[1]
+              } else {
+                displayName = getSigunguLabel(key)
+              }
+              const confirmLabel = isEnglish
+                ? (KOREA_SIGUNGU_EN[key] ?? `${selectedCity} ${displayName}`)
+                : isJapanese
+                  ? `${getCityDisplayName(selectedCity)} ${displayName}`
+                  : `${selectedCity} ${displayName}`
               const isSelected = key === currentLocationName
               return (
                 <Pressable
@@ -318,7 +368,7 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
                   ]}
                   onPress={() => {
                     posthog.capture('location_selected', { region: key, country: 'KR' })
-                    confirmSelect(key, `${selectedCity} ${displayName}`, sg.lat, sg.lon)
+                    confirmSelect(key, confirmLabel, sg.lat, sg.lon)
                   }}
                 >
                   <Text style={[styles.chipText, isDark && styles.textDark, isSelected && styles.chipTextSelected]}>
