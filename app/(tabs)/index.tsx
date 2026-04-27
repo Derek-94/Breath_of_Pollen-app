@@ -469,6 +469,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: '#666',
+    textAlign: 'center',
+    alignSelf: 'stretch',
+    paddingHorizontal: 32,
   },
   errorText: {
     fontSize: 14,

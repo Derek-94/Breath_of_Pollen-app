@@ -102,5 +102,7 @@ const styles = StyleSheet.create({
   chartHour: {
     fontSize: 11,
     color: '#999',
+    width: 44,
+    textAlign: 'center',
   },
 })

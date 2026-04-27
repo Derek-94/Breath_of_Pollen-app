@@ -16,8 +16,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native'
-import { TimePicker } from '@/components/TimePicker'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -80,6 +79,9 @@ export default function SettingsScreen() {
   const [modalMinute, setModalMinute] = useState(DEFAULT_EVENING_MINUTE)
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current
+
+  const [androidPickerVisible, setAndroidPickerVisible] = useState(false)
+  const [androidPickerSlot, setAndroidPickerSlot] = useState<'evening' | 'morning'>('evening')
 
   useEffect(() => {
     getNotificationSettings().then(({ evening, morning }) => {
@@ -182,27 +184,35 @@ export default function SettingsScreen() {
     })
   }, [backdropOpacity, sheetTranslateY])
 
+  const saveTime = useCallback(async (slot: 'evening' | 'morning', h: number, m: number) => {
+    const d = new Date(); d.setHours(h, m, 0, 0)
+    const tomorrow = getTomorrowData()
+    if (slot === 'evening') {
+      setEveningDate(d)
+      await Promise.all([AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m))])
+      if (eveningEnabled && tomorrow) await schedulePollenAlert(tomorrow, h, i18n.language, m)
+      posthog.capture('notification_hour_changed', { slot: 'evening', hour: h, minute: m })
+    } else {
+      setMorningDate(d)
+      await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
+      if (morningEnabled) await scheduleMorningAlert(getTodayData(), h, m, i18n.language)
+      posthog.capture('notification_hour_changed', { slot: 'morning', hour: h, minute: m })
+    }
+  }, [eveningEnabled, morningEnabled, i18n.language, getTomorrowData, getTodayData, posthog])
+
   const handleTimeConfirm = useCallback(() => {
     const slot = timeModalSlot
     if (!slot) return
     const h = modalHour
     const m = modalMinute
-    const tomorrow = getTomorrowData()
-    closeTimeModal(async () => {
-      const d = new Date(); d.setHours(h, m, 0, 0)
-      if (slot === 'evening') {
-        setEveningDate(d)
-        await Promise.all([AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m))])
-        if (eveningEnabled && tomorrow) await schedulePollenAlert(tomorrow, h, i18n.language, m)
-        posthog.capture('notification_hour_changed', { slot: 'evening', hour: h, minute: m })
-      } else {
-        setMorningDate(d)
-        await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
-        if (morningEnabled) await scheduleMorningAlert(getTodayData(), h, m, i18n.language)
-        posthog.capture('notification_hour_changed', { slot: 'morning', hour: h, minute: m })
-      }
-    })
-  }, [timeModalSlot, modalHour, modalMinute, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, getTodayData, closeTimeModal, posthog])
+    closeTimeModal(async () => { await saveTime(slot, h, m) })
+  }, [timeModalSlot, modalHour, modalMinute, closeTimeModal, saveTime])
+
+  const handleAndroidPickerChange = useCallback(async (event: DateTimePickerEvent, date?: Date) => {
+    setAndroidPickerVisible(false)
+    if (event.type === 'dismissed' || !date) return
+    await saveTime(androidPickerSlot, date.getHours(), date.getMinutes())
+  }, [androidPickerSlot, saveTime])
 
   useFocusEffect(
     useCallback(() => {
@@ -282,7 +292,10 @@ export default function SettingsScreen() {
             <Text style={[styles.label, isDark && styles.textMuted]}>🌙 {t('settings.notifToggle')}</Text>
             <View style={styles.notifRight}>
               {eveningEnabled && (
-                <Pressable onPress={() => openTimeModal('evening')}>
+                <Pressable onPress={() => {
+                  if (Platform.OS === 'android') { setAndroidPickerSlot('evening'); setAndroidPickerVisible(true) }
+                  else openTimeModal('evening')
+                }}>
                   <Text style={[styles.inlineTime, isDark && styles.tintDark]}>
                     {String(eveningDate.getHours()).padStart(2, '0')}:{String(eveningDate.getMinutes()).padStart(2, '0')} ›
                   </Text>
@@ -303,7 +316,10 @@ export default function SettingsScreen() {
             <Text style={[styles.label, isDark && styles.textMuted]}>🌅 {t('settings.notifMorningToggle')}</Text>
             <View style={styles.notifRight}>
               {morningEnabled && (
-                <Pressable onPress={() => openTimeModal('morning')}>
+                <Pressable onPress={() => {
+                  if (Platform.OS === 'android') { setAndroidPickerSlot('morning'); setAndroidPickerVisible(true) }
+                  else openTimeModal('morning')
+                }}>
                   <Text style={[styles.inlineTime, isDark && styles.tintDark]}>
                     {String(morningDate.getHours()).padStart(2, '0')}:{String(morningDate.getMinutes()).padStart(2, '0')} ›
                   </Text>
@@ -337,16 +353,16 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* Time picker modal */}
-        <Modal visible={modalVisible} transparent animationType="none">
-          <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => closeTimeModal()} />
-          </Animated.View>
-          <Animated.View
-            style={[styles.modalSheet, isDark && styles.modalSheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
-          >
-            <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t('settings.notifTime')}</Text>
-            {Platform.OS === 'ios' ? (
+        {/* iOS: slide-up modal with spinner */}
+        {Platform.OS === 'ios' && (
+          <Modal visible={modalVisible} transparent animationType="none">
+            <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => closeTimeModal()} />
+            </Animated.View>
+            <Animated.View
+              style={[styles.modalSheet, isDark && styles.modalSheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
+            >
+              <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t('settings.notifTime')}</Text>
               <DateTimePicker
                 value={new Date(new Date().setHours(modalHour, modalMinute, 0, 0))}
                 mode="time"
@@ -354,21 +370,25 @@ export default function SettingsScreen() {
                 themeVariant={isDark ? 'dark' : 'light'}
                 onChange={(_, date) => { if (date) { setModalHour(date.getHours()); setModalMinute(date.getMinutes()) } }}
               />
-            ) : (
-              <TimePicker
-                hour={modalHour}
-                minute={modalMinute}
-                onChange={(h, m) => { setModalHour(h); setModalMinute(m) }}
-              />
-            )}
-            <Pressable
-              style={({ pressed }) => [styles.modalConfirm, pressed && { opacity: 0.8 }]}
-              onPress={handleTimeConfirm}
-            >
-              <Text style={styles.modalConfirmText}>{t('settings.notifSaved')}</Text>
-            </Pressable>
-          </Animated.View>
-        </Modal>
+              <Pressable
+                style={({ pressed }) => [styles.modalConfirm, pressed && { opacity: 0.8 }]}
+                onPress={handleTimeConfirm}
+              >
+                <Text style={styles.modalConfirmText}>{t('settings.notifSaved')}</Text>
+              </Pressable>
+            </Animated.View>
+          </Modal>
+        )}
+
+        {/* Android: native time picker dialog */}
+        {Platform.OS === 'android' && androidPickerVisible && (
+          <DateTimePicker
+            value={androidPickerSlot === 'evening' ? eveningDate : morningDate}
+            mode="time"
+            display="default"
+            onChange={handleAndroidPickerChange}
+          />
+        )}
 
         {/* Theme section */}
         <View style={[styles.card, isDark && styles.cardDark]}>
