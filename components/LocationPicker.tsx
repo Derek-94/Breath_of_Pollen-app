@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-nati
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import { PREFECTURE_COORDS, REGIONS } from '@/lib/prefecture-coords'
-import { KOREA_SIDO, KOREA_SIGUNGU, KOREA_SIDO_KEYS, KOREA_SIDO_EN, KOREA_SIGUNGU_EN, KOREA_SIDO_GROUPS, getSigunguDisplayName } from '@/lib/korea-coords'
+import { KOREA_SIDO, KOREA_SIGUNGU, KOREA_SIDO_KEYS, KOREA_SIDO_EN, KOREA_SIGUNGU_EN, KOREA_SIDO_GROUPS, getSigunguDisplayName, getKRSigunguGrouped } from '@/lib/korea-coords'
 import {
   PREFECTURE_ROMANIZED,
   PREFECTURE_HIGHLIGHT_EMOJI,
@@ -29,6 +29,14 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
   const [selectedSido, setSelectedSido] = useState<string | null>(() => {
     if (currentLocationName?.includes('_')) {
       return KOREA_SIGUNGU[currentLocationName]?.sido ?? null
+    }
+    return null
+  })
+  const [selectedCity, setSelectedCity] = useState<string | null>(() => {
+    if (currentLocationName?.includes('_')) {
+      const name = currentLocationName.split('_')[1]
+      const m = name.match(/^(.+시)(.+[구군])$/)
+      return m ? m[1] : null
     }
     return null
   })
@@ -69,7 +77,10 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
   }
 
   const sidoList = Object.keys(KOREA_SIDO)
-  const sigunguKeys = selectedSido ? (KOREA_SIDO_KEYS[selectedSido] ?? []) : []
+  const grouped = selectedSido ? getKRSigunguGrouped(selectedSido) : null
+  const cityKeys = selectedSido && selectedCity && grouped
+    ? grouped.cities.find(c => c.name === selectedCity)?.keys ?? []
+    : []
 
   return (
     <ScrollView
@@ -115,7 +126,7 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
       <View style={[styles.tabRow, isDark && styles.tabRowDark]}>
         <Pressable
           style={[styles.tab, activeTab === 'JP' && styles.tabActive, activeTab === 'JP' && isDark && styles.tabActiveDark]}
-          onPress={() => { setActiveTab('JP'); setSelectedSido(null) }}
+          onPress={() => { setActiveTab('JP'); setSelectedSido(null); setSelectedCity(null) }}
         >
           <Text style={[styles.tabText, isDark && styles.tabTextDark, activeTab === 'JP' && styles.tabTextActive, activeTab === 'JP' && isDark && styles.tabTextActiveDark]}>
             {t('locationPicker.japan')}
@@ -201,8 +212,128 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
         </View>
       ))}
 
-      {/* 한국 섹션 — 시/군/구 리스트 */}
-      {activeTab === 'KR' && selectedSido && (
+      {/* 한국 섹션 — 2단계: 중간 시 목록 (경기/경남/경북 등) */}
+      {activeTab === 'KR' && selectedSido && !selectedCity && grouped?.hasCities && (
+        <View style={styles.regionBlock}>
+          <Pressable
+            style={({ pressed }) => [styles.backRow, isDark && styles.backRowDark, pressed && styles.chipPressed]}
+            onPress={() => setSelectedSido(null)}
+          >
+            <Text style={[styles.backChevron, isDark && styles.textDark]}>‹</Text>
+            <Text style={[styles.backText, isDark && styles.textDark]}>{getSidoDisplayName(selectedSido)}</Text>
+          </Pressable>
+
+          {/* 하위 구가 있는 시 목록 */}
+          <View style={styles.sidoGrid}>
+            {grouped.cities.map((city) => {
+              const isCurrentCity = currentLocationName?.includes('_') &&
+                currentLocationName.split('_')[1].startsWith(city.name)
+              return (
+                <Pressable
+                  key={city.name}
+                  style={({ pressed }) => [
+                    styles.sidoRow, isDark && styles.sidoRowDark,
+                    isCurrentCity && styles.sidoRowSelected, isCurrentCity && isDark && styles.sidoRowSelectedDark,
+                    pressed && styles.chipPressed,
+                  ]}
+                  onPress={() => setSelectedCity(city.name)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sidoText, isDark && styles.textDark, isCurrentCity && styles.chipTextSelected]}>
+                      {city.name}
+                    </Text>
+                    <Text style={[styles.citySubText, isDark && styles.textMuted]}>{city.keys.length}개 구</Text>
+                  </View>
+                  {isCurrentCity
+                    ? <Text style={styles.checkmark}>✓</Text>
+                    : <Text style={[styles.chevron, isDark && styles.textMuted]}>›</Text>}
+                </Pressable>
+              )
+            })}
+          </View>
+
+          {/* 단독 시/군 */}
+          {grouped.standalones.length > 0 && (
+            <>
+              <Text style={[styles.regionTitle, isDark && styles.textMuted, { marginTop: 16 }]}>
+                {isEnglish ? 'Other Cities & Counties' : '시/군'}
+              </Text>
+              <View style={styles.grid}>
+                {grouped.standalones.map((key) => {
+                  const sg = KOREA_SIGUNGU[key]
+                  if (!sg) return null
+                  const displayName = getSigunguLabel(key)
+                  const isSelected = key === currentLocationName
+                  return (
+                    <Pressable
+                      key={key}
+                      style={({ pressed }) => [
+                        styles.chip, isDark && styles.chipDark,
+                        isSelected && styles.chipSelected, isSelected && isDark && styles.chipSelectedDark,
+                        pressed && styles.chipPressed,
+                      ]}
+                      onPress={() => {
+                        posthog.capture('location_selected', { region: key, country: 'KR' })
+                        confirmSelect(key, displayName, sg.lat, sg.lon)
+                      }}
+                    >
+                      <Text style={[styles.chipText, isDark && styles.textDark, isSelected && styles.chipTextSelected]}>
+                        {displayName}
+                      </Text>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </Pressable>
+                  )
+                })}
+              </View>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* 한국 섹션 — 3단계: 시 내 구 목록 */}
+      {activeTab === 'KR' && selectedSido && selectedCity && (
+        <View style={styles.regionBlock}>
+          <Pressable
+            style={({ pressed }) => [styles.backRow, isDark && styles.backRowDark, pressed && styles.chipPressed]}
+            onPress={() => setSelectedCity(null)}
+          >
+            <Text style={[styles.backChevron, isDark && styles.textDark]}>‹</Text>
+            <Text style={[styles.backText, isDark && styles.textDark]}>{selectedCity}</Text>
+          </Pressable>
+          <View style={styles.grid}>
+            {cityKeys.map((key) => {
+              const sg = KOREA_SIGUNGU[key]
+              if (!sg) return null
+              const name = key.split('_')[1]
+              const m = name.match(/^.+시(.+[구군])$/)
+              const displayName = m ? m[1] : getSigunguLabel(key)
+              const isSelected = key === currentLocationName
+              return (
+                <Pressable
+                  key={key}
+                  style={({ pressed }) => [
+                    styles.chip, isDark && styles.chipDark,
+                    isSelected && styles.chipSelected, isSelected && isDark && styles.chipSelectedDark,
+                    pressed && styles.chipPressed,
+                  ]}
+                  onPress={() => {
+                    posthog.capture('location_selected', { region: key, country: 'KR' })
+                    confirmSelect(key, `${selectedCity} ${displayName}`, sg.lat, sg.lon)
+                  }}
+                >
+                  <Text style={[styles.chipText, isDark && styles.textDark, isSelected && styles.chipTextSelected]}>
+                    {displayName}
+                  </Text>
+                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                </Pressable>
+              )
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* 한국 섹션 — 2단계: 평면 시/군/구 목록 (서울/부산 등 단순 구조) */}
+      {activeTab === 'KR' && selectedSido && !selectedCity && !grouped?.hasCities && (
         <View style={styles.regionBlock}>
           <Pressable
             style={({ pressed }) => [styles.backRow, isDark && styles.backRowDark, pressed && styles.chipPressed]}
@@ -212,7 +343,7 @@ export function LocationPicker({ onSelect, onReset, pollenUnavailable, currentLo
             <Text style={[styles.backText, isDark && styles.textDark]}>{getSidoDisplayName(selectedSido)}</Text>
           </Pressable>
           <View style={styles.grid}>
-            {sigunguKeys.map((key) => {
+            {(KOREA_SIDO_KEYS[selectedSido] ?? []).map((key) => {
               const sg = KOREA_SIGUNGU[key]
               if (!sg) return null
               const displayName = getSigunguLabel(key)
@@ -282,7 +413,8 @@ const styles = StyleSheet.create({
   sidoRowDark: { backgroundColor: '#2a2a2a' },
   sidoRowSelected: { backgroundColor: '#fff0eb', borderWidth: 1.5, borderColor: '#f87171' },
   sidoRowSelectedDark: { backgroundColor: '#2a1a1a', borderWidth: 1.5, borderColor: '#fb923c' },
-  sidoText: { flex: 1, fontSize: 14, fontWeight: '500', color: '#333' },
+  sidoText: { fontSize: 14, fontWeight: '500', color: '#333' },
+  citySubText: { fontSize: 11, color: '#aaa', marginTop: 1 },
   backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#f0f0f0', borderRadius: 12,

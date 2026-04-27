@@ -592,6 +592,41 @@ export function getSigunguDisplayName(key: string): string {
   return name
 }
 
+export interface KRSigunguGrouped {
+  hasCities: boolean
+  cities: { name: string; keys: string[] }[]
+  standalones: string[]
+}
+
+export function getKRSigunguGrouped(sido: string): KRSigunguGrouped {
+  const keys = KOREA_SIDO_KEYS[sido] ?? []
+  const cityMap = new Map<string, string[]>()
+  const standalones: string[] = []
+
+  for (const key of keys) {
+    const name = key.split('_')[1]
+    const m = name.match(/^(.+시)(.+[구군])$/)
+    if (m) {
+      const city = m[1]
+      if (!cityMap.has(city)) cityMap.set(city, [])
+      cityMap.get(city)!.push(key)
+    } else {
+      standalones.push(key)
+    }
+  }
+
+  const cities: { name: string; keys: string[] }[] = []
+  for (const [name, cityKeys] of cityMap) {
+    if (cityKeys.length >= 2) {
+      cities.push({ name, keys: cityKeys })
+    } else {
+      standalones.push(...cityKeys)
+    }
+  }
+
+  return { hasCities: cities.length > 0, cities, standalones }
+}
+
 export const KOREA_SIDO_GROUPS: { label: string; sidos: string[] }[] = [
   { label: '수도권', sidos: ['서울특별시', '인천광역시', '경기도'] },
   { label: '강원', sidos: ['강원특별자치도'] },
