@@ -1,9 +1,17 @@
 import { Tabs } from 'expo-router'
-import { Platform, StyleSheet } from 'react-native'
+import { Platform, StyleSheet, Text } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/contexts/ThemeContext'
+
+function TabLabel({ children, color }: { children: string; color: string }) {
+  return (
+    <Text allowFontScaling={false} style={{ fontSize: 10, color, marginTop: 2, marginBottom: 2 }}>
+      {children}
+    </Text>
+  )
+}
 
 const TINT_LIGHT = '#f87171'
 const TINT_DARK = '#fb923c'
@@ -44,6 +52,7 @@ export default function TabLayout() {
         options={{
           title: t('tabs.today'),
           tabBarIcon: ({ color }) => <TabIcon name="sun-o" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>{t('tabs.today')}</TabLabel>,
         }}
       />
       <Tabs.Screen
@@ -51,6 +60,7 @@ export default function TabLayout() {
         options={{
           title: t('tabs.weekly'),
           tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>{t('tabs.weekly')}</TabLabel>,
         }}
       />
       <Tabs.Screen
@@ -58,6 +68,7 @@ export default function TabLayout() {
         options={{
           title: t('tabs.settings'),
           tabBarIcon: ({ color }) => <TabIcon name="gear" color={color} />,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>{t('tabs.settings')}</TabLabel>,
         }}
       />
     </Tabs>

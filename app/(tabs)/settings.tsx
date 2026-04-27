@@ -15,7 +15,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import { TimePicker } from '@/components/TimePicker'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -74,7 +74,8 @@ export default function SettingsScreen() {
 
   const [timeModalSlot, setTimeModalSlot] = useState<'evening' | 'morning' | null>(null)
   const [modalVisible, setModalVisible] = useState(false)
-  const [modalDate, setModalDate] = useState(new Date())
+  const [modalHour, setModalHour] = useState(DEFAULT_EVENING_HOUR)
+  const [modalMinute, setModalMinute] = useState(DEFAULT_EVENING_MINUTE)
   const backdropOpacity = useRef(new Animated.Value(0)).current
   const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current
 
@@ -155,7 +156,9 @@ export default function SettingsScreen() {
   }, [morningDate, i18n.language, t, getTodayData, posthog])
 
   const openTimeModal = useCallback((slot: 'evening' | 'morning') => {
-    setModalDate(slot === 'evening' ? eveningDate : morningDate)
+    const d = slot === 'evening' ? eveningDate : morningDate
+    setModalHour(d.getHours())
+    setModalMinute(d.getMinutes())
     setTimeModalSlot(slot)
     setModalVisible(true)
     backdropOpacity.setValue(0)
@@ -180,23 +183,24 @@ export default function SettingsScreen() {
   const handleTimeConfirm = useCallback(() => {
     const slot = timeModalSlot
     if (!slot) return
-    const h = modalDate.getHours()
-    const m = modalDate.getMinutes()
+    const h = modalHour
+    const m = modalMinute
     const tomorrow = getTomorrowData()
     closeTimeModal(async () => {
+      const d = new Date(); d.setHours(h, m, 0, 0)
       if (slot === 'evening') {
-        setEveningDate(modalDate)
+        setEveningDate(d)
         await Promise.all([AsyncStorage.setItem(NOTIF_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MINUTE_KEY, String(m))])
         if (eveningEnabled && tomorrow) await schedulePollenAlert(tomorrow, h, i18n.language, m)
         posthog.capture('notification_hour_changed', { slot: 'evening', hour: h, minute: m })
       } else {
-        setMorningDate(modalDate)
+        setMorningDate(d)
         await Promise.all([AsyncStorage.setItem(NOTIF_MORNING_HOUR_KEY, String(h)), AsyncStorage.setItem(NOTIF_MORNING_MINUTE_KEY, String(m))])
         if (morningEnabled) await scheduleMorningAlert(getTodayData(), h, m, i18n.language)
         posthog.capture('notification_hour_changed', { slot: 'morning', hour: h, minute: m })
       }
     })
-  }, [timeModalSlot, modalDate, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, getTodayData, closeTimeModal, posthog])
+  }, [timeModalSlot, modalHour, modalMinute, eveningEnabled, morningEnabled, i18n.language, getTomorrowData, getTodayData, closeTimeModal, posthog])
 
   useFocusEffect(
     useCallback(() => {
@@ -340,15 +344,11 @@ export default function SettingsScreen() {
             style={[styles.modalSheet, isDark && styles.modalSheetDark, { transform: [{ translateY: sheetTranslateY }] }]}
           >
             <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t('settings.notifTime')}</Text>
-            <View style={{ alignItems: 'center' }}>
-              <DateTimePicker
-                value={modalDate}
-                mode="time"
-                display="spinner"
-                themeVariant={isDark ? 'dark' : 'light'}
-                onChange={(_, date) => { if (date) setModalDate(date) }}
-              />
-            </View>
+            <TimePicker
+              hour={modalHour}
+              minute={modalMinute}
+              onChange={(h, m) => { setModalHour(h); setModalMinute(m) }}
+            />
             <Pressable
               style={({ pressed }) => [styles.modalConfirm, pressed && { opacity: 0.8 }]}
               onPress={handleTimeConfirm}
