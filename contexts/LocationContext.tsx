@@ -69,8 +69,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   const clearSavedLocation = useCallback(async () => {
     try { await AsyncStorage.removeItem(SAVED_LOCATION_KEY) } catch {}
-    setLocation(null)
     setLoading(true)
+    setLocation(null)
     // Re-fetch GPS
     try {
       const pos = await ExpoLocation.getCurrentPositionAsync({
