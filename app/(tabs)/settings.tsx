@@ -83,6 +83,12 @@ export default function SettingsScreen() {
   const [androidPickerVisible, setAndroidPickerVisible] = useState(false)
   const [androidPickerSlot, setAndroidPickerSlot] = useState<'evening' | 'morning'>('evening')
 
+  const [infoPopupSlot, setInfoPopupSlot] = useState<'evening' | 'morning' | null>(null)
+  const [infoPopupDontShow, setInfoPopupDontShow] = useState(false)
+
+  const MORNING_INFO_SEEN_KEY = 'notif_morning_info_seen'
+  const EVENING_INFO_SEEN_KEY = 'notif_evening_info_seen'
+
   useEffect(() => {
     getNotificationSettings().then(({ evening, morning }) => {
       setEveningEnabled(evening.enabled)
@@ -214,6 +220,37 @@ export default function SettingsScreen() {
     await saveTime(androidPickerSlot, date.getHours(), date.getMinutes())
   }, [androidPickerSlot, saveTime])
 
+  const openTimeDirect = useCallback((slot: 'evening' | 'morning') => {
+    if (Platform.OS === 'android') {
+      setAndroidPickerSlot(slot)
+      setAndroidPickerVisible(true)
+    } else {
+      openTimeModal(slot)
+    }
+  }, [openTimeModal])
+
+  const handleTimeTap = useCallback(async (slot: 'evening' | 'morning') => {
+    const key = slot === 'morning' ? MORNING_INFO_SEEN_KEY : EVENING_INFO_SEEN_KEY
+    const seen = await AsyncStorage.getItem(key)
+    if (seen === 'true') {
+      openTimeDirect(slot)
+    } else {
+      setInfoPopupDontShow(false)
+      setInfoPopupSlot(slot)
+    }
+  }, [openTimeDirect])
+
+  const handleInfoConfirm = useCallback(async () => {
+    const slot = infoPopupSlot
+    if (!slot) return
+    if (infoPopupDontShow) {
+      const key = slot === 'morning' ? MORNING_INFO_SEEN_KEY : EVENING_INFO_SEEN_KEY
+      await AsyncStorage.setItem(key, 'true')
+    }
+    setInfoPopupSlot(null)
+    openTimeDirect(slot)
+  }, [infoPopupSlot, infoPopupDontShow, openTimeDirect])
+
   useFocusEffect(
     useCallback(() => {
       return () => setShowPicker(false)
@@ -289,21 +326,18 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, isDark && styles.textDark]}>{t('settings.notification')}</Text>
 
           <View style={styles.row}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>🌙 {t('settings.notifToggle')}</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>🌅 {t('settings.notifMorningToggle')}</Text>
             <View style={styles.notifRight}>
-              {eveningEnabled && (
-                <Pressable onPress={() => {
-                  if (Platform.OS === 'android') { setAndroidPickerSlot('evening'); setAndroidPickerVisible(true) }
-                  else openTimeModal('evening')
-                }}>
+              {morningEnabled && (
+                <Pressable onPress={() => handleTimeTap('morning')}>
                   <Text style={[styles.inlineTime, isDark && styles.tintDark]}>
-                    {String(eveningDate.getHours()).padStart(2, '0')}:{String(eveningDate.getMinutes()).padStart(2, '0')} ›
+                    {String(morningDate.getHours()).padStart(2, '0')}:{String(morningDate.getMinutes()).padStart(2, '0')} ›
                   </Text>
                 </Pressable>
               )}
               <Switch
-                value={eveningEnabled}
-                onValueChange={handleEveningToggle}
+                value={morningEnabled}
+                onValueChange={handleMorningToggle}
                 trackColor={{ false: '#ccc', true: '#f87171' }}
                 thumbColor="#fff"
               />
@@ -313,21 +347,18 @@ export default function SettingsScreen() {
           <View style={[styles.divider, isDark && styles.dividerDark]} />
 
           <View style={[styles.row, styles.rowLast]}>
-            <Text style={[styles.label, isDark && styles.textMuted]}>🌅 {t('settings.notifMorningToggle')}</Text>
+            <Text style={[styles.label, isDark && styles.textMuted]}>🌙 {t('settings.notifToggle')}</Text>
             <View style={styles.notifRight}>
-              {morningEnabled && (
-                <Pressable onPress={() => {
-                  if (Platform.OS === 'android') { setAndroidPickerSlot('morning'); setAndroidPickerVisible(true) }
-                  else openTimeModal('morning')
-                }}>
+              {eveningEnabled && (
+                <Pressable onPress={() => handleTimeTap('evening')}>
                   <Text style={[styles.inlineTime, isDark && styles.tintDark]}>
-                    {String(morningDate.getHours()).padStart(2, '0')}:{String(morningDate.getMinutes()).padStart(2, '0')} ›
+                    {String(eveningDate.getHours()).padStart(2, '0')}:{String(eveningDate.getMinutes()).padStart(2, '0')} ›
                   </Text>
                 </Pressable>
               )}
               <Switch
-                value={morningEnabled}
-                onValueChange={handleMorningToggle}
+                value={eveningEnabled}
+                onValueChange={handleEveningToggle}
                 trackColor={{ false: '#ccc', true: '#f87171' }}
                 thumbColor="#fff"
               />
@@ -389,6 +420,32 @@ export default function SettingsScreen() {
             onChange={handleAndroidPickerChange}
           />
         )}
+
+        {/* 알림 설명 팝업 */}
+        <Modal visible={infoPopupSlot !== null} transparent animationType="fade">
+          <Pressable style={styles.infoBackdrop} onPress={() => setInfoPopupSlot(null)}>
+            <Pressable style={[styles.infoCard, isDark && styles.infoCardDark]} onPress={() => {}}>
+              <Text style={[styles.infoTitle, isDark && styles.textDark]}>
+                {infoPopupSlot === 'morning' ? t('settings.notifInfoMorningTitle') : t('settings.notifInfoEveningTitle')}
+              </Text>
+              <Text style={[styles.infoDesc, isDark && styles.textMuted]}>
+                {infoPopupSlot === 'morning' ? t('settings.notifInfoMorningDesc') : t('settings.notifInfoEveningDesc')}
+              </Text>
+              <Pressable style={styles.infoCheckRow} onPress={() => setInfoPopupDontShow(v => !v)}>
+                <View style={[styles.infoCheckbox, isDark && styles.infoCheckboxDark, infoPopupDontShow && styles.infoCheckboxChecked]}>
+                  {infoPopupDontShow && <Text style={styles.infoCheckmark}>✓</Text>}
+                </View>
+                <Text style={[styles.infoCheckLabel, isDark && styles.textMuted]}>{t('settings.notifInfoDontShow')}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.infoConfirm, pressed && { opacity: 0.8 }]}
+                onPress={handleInfoConfirm}
+              >
+                <Text style={styles.infoConfirmText}>{t('settings.notifInfoConfirm')}</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {/* Theme section */}
         <View style={[styles.card, isDark && styles.cardDark]}>
@@ -664,6 +721,85 @@ const styles = StyleSheet.create({
   },
   tintDark: {
     color: '#fb923c',
+  },
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  infoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  infoCardDark: {
+    backgroundColor: '#1e1e1e',
+  },
+  infoTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111',
+    textAlign: 'center',
+  },
+  infoDesc: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  infoCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  infoCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoCheckboxDark: {
+    borderColor: '#555',
+  },
+  infoCheckboxChecked: {
+    backgroundColor: '#f87171',
+    borderColor: '#f87171',
+  },
+  infoCheckmark: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+    includeFontPadding: false,
+    lineHeight: 16,
+  },
+  infoCheckLabel: {
+    fontSize: 13,
+    color: '#666',
+  },
+  infoConfirm: {
+    backgroundColor: '#f87171',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  infoConfirmText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   footer: {
     fontSize: 12,

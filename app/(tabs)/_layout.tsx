@@ -35,9 +35,13 @@ export default function TabLayout() {
         tabBarIconStyle: { marginBottom: 2 },
         tabBarLabelStyle: { marginTop: 2 },
         tabBarStyle: {
-          backgroundColor: isDark ? '#1a1a1a' : '#fff',
-          borderTopColor: isDark ? '#333' : '#eee',
-          borderTopWidth: StyleSheet.hairlineWidth,
+          backgroundColor: isDark
+            ? Platform.OS === 'android' ? '#252525' : '#1a1a1a'
+            : '#fff',
+          borderTopColor: isDark
+            ? Platform.OS === 'android' ? '#3a3a3a' : '#333'
+            : Platform.OS === 'android' ? '#ddd' : '#eee',
+          borderTopWidth: Platform.OS === 'android' ? 1 : StyleSheet.hairlineWidth,
           shadowColor: 'transparent',
           elevation: 0,
           paddingTop: Platform.OS === 'ios' ? 6 : 0,
