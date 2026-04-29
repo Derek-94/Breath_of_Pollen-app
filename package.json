@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "prebuild:ios": ". ~/.nvm/nvm.sh && nvm use && expo prebuild --platform ios --clean && cd ios && pod install",
+    "prebuild:ios": ". ~/.nvm/nvm.sh && nvm use && expo prebuild --platform ios --clean && cd ios && pod install && mkdir -p app.xcworkspace/xcshareddata/xcschemes && cp app.xcodeproj/xcshareddata/xcschemes/app.xcscheme app.xcworkspace/xcshareddata/xcschemes/",
     "build:android": ". ~/.nvm/nvm.sh && nvm use && cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
