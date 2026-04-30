@@ -143,7 +143,7 @@ export function PollenDetail({ plants, overallLevel, weeklyForecast, country, on
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: (_e: GestureResponderEvent, gs: PanResponderGestureState) => {
         if (gs.dy > 0) {
