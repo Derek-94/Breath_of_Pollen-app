@@ -42,7 +42,7 @@ function InnerLayout() {
   const [showWhatsNew, setShowWhatsNew] = useState(false)
 
   useEffect(() => {
-    initLanguage().then(async () => {
+    Promise.all([initLanguage(), trackAppOpen()]).then(async () => {
       const [onboardingDone, whatsNewShown] = await Promise.all([
         AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY),
         AsyncStorage.getItem('whats_new_shown_v1.2.0'),
@@ -54,7 +54,6 @@ function InnerLayout() {
       }
       SplashScreen.hideAsync()
     })
-    trackAppOpen()
   }, [])
 
   const handleWhatsNewClose = async () => {

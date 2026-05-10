@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native'
 import { useTheme } from '@/contexts/ThemeContext'
-import { markReviewRequested, requestReview } from '@/lib/review'
+import { markReviewRequested, requestReview, snoozeReview } from '@/lib/review'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 
@@ -48,7 +48,7 @@ export function ReviewPrompt({ onClose }: ReviewPromptProps) {
   }
 
   const handleDismiss = async () => {
-    await markReviewRequested()
+    await snoozeReview()
     dismiss()
   }
 

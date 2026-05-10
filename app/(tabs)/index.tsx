@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePostHog } from 'posthog-react-native'
 import { useTranslation } from 'react-i18next'
 import {
@@ -55,9 +55,11 @@ export default function TodayScreen() {
   const [showPicker, setShowPicker] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [showReviewPrompt, setShowReviewPrompt] = useState(false)
+  const reviewChecked = useRef(false)
 
   useEffect(() => {
-    if (data) {
+    if (data && !reviewChecked.current) {
+      reviewChecked.current = true
       shouldShowReviewPrompt().then((show) => {
         if (show) setShowReviewPrompt(true)
       })
