@@ -92,6 +92,13 @@ export default function TodayScreen() {
   if (shouldShowPicker) {
     return (
       <SafeAreaView edges={["top", "left", "right"]} style={[styles.container, isDark && styles.containerDark]}>
+        {showPicker && (
+          <View style={styles.pickerHeader}>
+            <Pressable onPress={() => setShowPicker(false)}>
+              <Text style={[styles.backText, isDark && styles.backTextDark]}>{t('common.back')}</Text>
+            </Pressable>
+          </View>
+        )}
         <Logo />
         <LocationPicker
           onSelect={handlePrefectureSelect}
@@ -501,5 +508,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
     textDecorationLine: 'underline',
+  },
+  pickerHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  backText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#f87171',
+  },
+  backTextDark: {
+    color: '#fb923c',
   },
 })
